@@ -51,9 +51,9 @@ sudo zypper install git cmake gcc-c++ extra-cmake-modules libqt5-qttools-devel l
 ```
 git clone https://github.com/a-parhom/LightlyShaders
 
-git checkout v2.0
+cd LightlyShaders; git checkout v2.0
 
-cd LightlyShaders; mkdir qt5build; cd qt5build; cmake ../ -DCMAKE_INSTALL_PREFIX=/usr && make && sudo make install && (kwin_x11 --replace &)
+mkdir qt5build; cd qt5build; cmake ../ -DCMAKE_INSTALL_PREFIX=/usr && make && sudo make install && (kwin_x11 --replace &)
 ```
 
 ## Note
