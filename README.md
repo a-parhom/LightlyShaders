@@ -34,25 +34,25 @@ On Plasma 6 Beta and RC builds you can try experimental branch **plasma6**. Even
 Plasma >= 5.27.10.
  
 Debian based (Ubuntu, Kubuntu, KDE Neon):
-```
+```bash
 sudo apt install git cmake g++ gettext extra-cmake-modules qttools5-dev libqt5x11extras5-dev libkf5*-dev libxcb*-dev kinit-dev kwin-dev 
 ```
 Fedora based
-```
-sudo dnf install git cmake gcc-c++ extra-cmake-modules qt5-qttools-devel qt5-qttools-static qt5-qtx11extras-devel kf5-kconfigwidgets-devel kf5-kcrash-devel kf5-kguiaddons-devel kf5-kglobalaccel-devel kf5-kio-devel kf5-ki18n-devel kf5-knotifications-devel kf5-kinit-devel kwin-devel qt5-qtbase-devel libepoxy-devel
+```bash
+sudo dnf install git cmake gcc-c++ extra-cmake-modules qt5-qttools-devel qt5-qttools-static qt5-qtx11extras-devel kf5-kconfigwidgets-devel kf5-kcrash-devel kf5-kguiaddons-devel kf5-kglobalaccel-devel kf5-kio-devel kf5-ki18n-devel kf5-knotifications-devel kf5-kinit-devel kwin-devel qt5-qtbase-devel libepoxy-devel kdecoration-devel kf5-kiconthemes-devel kf5-kpackage-devel xcb-imdkit-devel xcb-proto xcb-util-cursor-devel xcb-util-devel xcb-util-image-devel xcb-util-keysyms-devel xcb-util-renderutil-devel xcb-util-wm-devel xcb-util-xrm-devel xcb-imdkit xcb-util-xrm
 ```
 Arch based
-```
+```bash
 sudo pacman -S git make cmake gcc gettext extra-cmake-modules qt5-tools qt5-x11extras kcrash kglobalaccel kde-dev-utils kio knotifications kinit kwin
 ```
 OpenSUSE based
-```
+```bash
 sudo zypper install git cmake gcc-c++ extra-cmake-modules libqt5-qttools-devel libqt5-qtx11extras-devel kconfigwidgets-devel kcrash-devel kguiaddons-devel kglobalaccel-devel kio-devel ki18n-devel knotifications-devel kinit-devel kwin5-devel libQt5Gui-devel libQt5OpenGL-devel libepoxy-devel
 ```
 
 # Installation
 ## Via script
-```
+```bash
 git clone https://github.com/a-parhom/LightlyShaders
 
 cd LightlyShaders;
@@ -62,7 +62,7 @@ sudo ./install.sh
 ```
 ## Manually
 If the script doesn't work for you, you can find libkwin.so.5 file manually and make a symlink named libkwin.so to it in the same directory (or in the directory, where `ld` looks for libraries to link with). After that you can build and install like in previous versions:
-```
+```bash
 mkdir build; cd build
 cmake ../ -DCMAKE_INSTALL_PREFIX=/usr
 make -j$(nproc)
@@ -70,7 +70,7 @@ sudo make install
 ```
 
 # Uninstall
-```
+```bash
 chmod +x uninstall.sh
 sudo ./uninstall.sh
 ```
