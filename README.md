@@ -35,7 +35,7 @@ Plasma >= 5.27.10.
  
 Debian based (Ubuntu, Kubuntu, KDE Neon):
 ```bash
-sudo apt install git cmake g++ gettext extra-cmake-modules qttools5-dev libqt5x11extras5-dev libkf5*-dev libxcb*-dev kinit-dev kwin-dev 
+sudo apt install git cmake g++ gettext extra-cmake-modules qttools5-dev libqt5x11extras5-dev libkdecorations2-dev libkf5*-dev libxcb*-dev kinit-dev kwin-dev 
 ```
 Fedora based
 ```bash
