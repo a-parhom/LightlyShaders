@@ -37,7 +37,7 @@ public:
 
     static bool supported();
     static bool enabledByDefault();
-    
+
     void setRoundness(const int r, EffectScreen *s);
     void reconfigure(ReconfigureFlags flags) override;
     void paintScreen(int mask, const QRegion &region, ScreenPaintData &data) override;
@@ -62,6 +62,7 @@ private:
 
     struct LSScreenStruct
     {
+        bool configured=false;
         qreal scale=1.0;
         float sizeScaled;
     };
@@ -86,4 +87,3 @@ private:
 } // namespace KWin
 
 #endif //LIGHTLYSHADERS_H
-
