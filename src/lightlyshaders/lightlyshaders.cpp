@@ -27,6 +27,7 @@
 #include <QStandardPaths>
 #include <QWindow>
 #include <opengl/glutils.h>
+#include <opengl/openglcontext.h>
 #include <effect/effect.h>
 #include <core/renderviewport.h>
 #include <QMatrix4x4>
@@ -354,7 +355,7 @@ LightlyShadersEffect::enabledByDefault()
 bool
 LightlyShadersEffect::supported()
 {
-    return effects->isOpenGLCompositing() && GLFramebuffer::supported();
+    return effects->openglContext() && effects->openglContext()->checkSupported() && effects->openglContext()->supportsBlits();
 }
 
 } // namespace KWin
