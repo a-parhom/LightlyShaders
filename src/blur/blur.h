@@ -9,6 +9,7 @@
 
 #include "effect/effect.h"
 #include "opengl/glutils.h"
+#include "opengl/openglcontext.h"
 
 #include <QList>
 
