@@ -19,6 +19,8 @@ target_link_libraries(lightlyshaders_blur PRIVATE
     KDecoration2::KDecoration
 
     lshelper
+
+    xcb xcb-randr
 )
 
 install(TARGETS lightlyshaders_blur DESTINATION ${KDE_INSTALL_PLUGINDIR}/kwin/effects/plugins)

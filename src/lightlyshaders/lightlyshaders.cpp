@@ -354,7 +354,7 @@ LightlyShadersEffect::enabledByDefault()
 bool
 LightlyShadersEffect::supported()
 {
-    return effects->isOpenGLCompositing() && GLFramebuffer::supported();
+    return effects->isOpenGLCompositing();
 }
 
 } // namespace KWin
