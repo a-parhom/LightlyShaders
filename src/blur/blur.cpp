@@ -365,22 +365,6 @@ bool BlurEffect::eventFilter(QObject *watched, QEvent *event)
 
 bool BlurEffect::enabledByDefault()
 {
-    /*const auto context = effects->openglContext();
-    if (!context || context->isSoftwareRenderer()) {
-        return false;
-    }
-    GLPlatform *gl = context->glPlatform();
-
-    if (gl->isIntel() && gl->chipClass() < SandyBridge) {
-        return false;
-    }
-    if (gl->isPanfrost() && gl->chipClass() <= MaliT8XX) {
-        return false;
-    }
-    // The blur effect works, but is painfully slow (FPS < 5) on Mali and VideoCore
-    if (gl->isLima() || gl->isVideoCore4() || gl->isVideoCore3D()) {
-        return false;
-    } */
     return false;
 }
 
