@@ -9,7 +9,7 @@
 
 #include "effect/effect.h"
 #include "opengl/glutils.h"
-#include "opengl/openglcontext.h"
+#include "scene/item.h"
 
 #include <QList>
 
@@ -40,6 +40,8 @@ struct BlurEffectData
 
     /// The render data per screen. Screens can have different color spaces.
     std::unordered_map<Output *, BlurRenderData> render;
+
+    ItemEffect windowEffect;
 };
 
 class BlurEffect : public KWin::Effect
@@ -74,7 +76,9 @@ public Q_SLOTS:
     void slotWindowAdded(KWin::EffectWindow *w);
     void slotWindowDeleted(KWin::EffectWindow *w);
     void slotScreenRemoved(KWin::Output *screen);
+#if KWIN_BUILD_X11
     void slotPropertyNotify(KWin::EffectWindow *w, long atom);
+#endif
     void setupDecorationConnections(EffectWindow *w);
 
 private:
@@ -84,9 +88,7 @@ private:
     bool decorationSupportsBlurBehind(const EffectWindow *w) const;
     bool shouldBlur(const EffectWindow *w, int mask, const WindowPaintData &data) const;
     void updateBlurRegion(EffectWindow *w);
-
     void blur(const RenderTarget &renderTarget, const RenderViewport &viewport, EffectWindow *w, int mask, const QRegion &region, WindowPaintData &data);
-
     GLTexture *ensureNoiseTexture();
 
 private:
@@ -121,7 +123,9 @@ private:
     } m_noisePass;
 
     bool m_valid = false;
+#if KWIN_BUILD_X11
     long net_wm_blur_region = 0;
+#endif
     QRegion m_paintedArea; // keeps track of all painted areas (from bottom to top)
     QRegion m_currentBlur; // keeps track of the currently blured area of the windows(from bottom to top)
     Output *m_currentScreen = nullptr;

@@ -10,14 +10,21 @@
 // KConfigSkeleton
 #include "blurconfig.h"
 
+#include "core/pixelgrid.h"
 #include "core/rendertarget.h"
 #include "core/renderviewport.h"
 #include "effect/effecthandler.h"
-//#include "opengl/glplatform.h" //we want plugin to be disabled by default, so no checks needed
+#include "opengl/glplatform.h"
+#include "scene/decorationitem.h"
+// #include "scene/surfaceitem.h"
+#include "scene/windowitem.h"
 #include "wayland/blur.h"
-#include "wayland/display.h"
+// #include "wayland/display.h"
 #include "wayland/surface.h"
+
+#if KWIN_BUILD_X11
 #include "utils/xcbutils.h"
+#endif
 
 #include <QGuiApplication>
 #include <QMatrix4x4>
@@ -95,9 +102,11 @@ BlurEffect::BlurEffect()
     initBlurStrengthValues();
     reconfigure(ReconfigureAll);
 
+#if KWIN_BUILD_X11
     if (effects->xcbConnection()) {
         net_wm_blur_region = effects->announceSupportProperty(s_blurAtomName, this);
     }
+#endif
 
     if (effects->waylandDisplay()) {
         if (!s_blurManagerRemoveTimer) {
@@ -117,10 +126,12 @@ BlurEffect::BlurEffect()
     connect(effects, &EffectsHandler::windowAdded, this, &BlurEffect::slotWindowAdded);
     connect(effects, &EffectsHandler::windowDeleted, this, &BlurEffect::slotWindowDeleted);
     connect(effects, &EffectsHandler::screenRemoved, this, &BlurEffect::slotScreenRemoved);
+#if KWIN_BUILD_X11
     connect(effects, &EffectsHandler::propertyNotify, this, &BlurEffect::slotPropertyNotify);
     connect(effects, &EffectsHandler::xcbConnectionChanged, this, [this]() {
         net_wm_blur_region = effects->announceSupportProperty(s_blurAtomName, this);
     });
+#endif
 
     // Fetch the blur regions for all windows
     const auto stackingOrder = effects->stackingOrder();
@@ -200,8 +211,7 @@ void BlurEffect::initBlurStrengthValues()
 void BlurEffect::reconfigure(ReconfigureFlags flags)
 {
     Q_UNUSED(flags)
-
-    BlurConfig::self()->load();
+    BlurConfig::self()->read();
 
     int blurStrength = BlurConfig::blurStrength() - 1;
     m_iterationCount = blurStrengthValues[blurStrength].iteration;
@@ -220,6 +230,7 @@ void BlurEffect::updateBlurRegion(EffectWindow *w)
     std::optional<QRegion> content;
     std::optional<QRegion> frame;
 
+#if KWIN_BUILD_X11
     if (net_wm_blur_region != XCB_ATOM_NONE) {
         const QByteArray value = w->readProperty(net_wm_blur_region, XCB_ATOM_CARDINAL, 32);
         QRegion region;
@@ -237,6 +248,7 @@ void BlurEffect::updateBlurRegion(EffectWindow *w)
             content = region;
         }
     }
+#endif
 
     SurfaceInterface *surf = w->surface();
 
@@ -259,6 +271,7 @@ void BlurEffect::updateBlurRegion(EffectWindow *w)
         BlurEffectData &data = m_windows[w];
         data.content = content;
         data.frame = frame;
+        data.windowEffect = ItemEffect(w->windowItem());
     } else {
         if (auto it = m_windows.find(w); it != m_windows.end()) {
             effects->makeOpenGLContextCurrent();
@@ -316,12 +329,14 @@ void BlurEffect::slotScreenRemoved(KWin::Output *screen)
     }
 }
 
+#if KWIN_BUILD_X11
 void BlurEffect::slotPropertyNotify(EffectWindow *w, long atom)
 {
     if (w && atom == net_wm_blur_region && net_wm_blur_region != XCB_ATOM_NONE) {
         updateBlurRegion(w);
     }
 }
+#endif
 
 void BlurEffect::setupDecorationConnections(EffectWindow *w)
 {
@@ -350,7 +365,11 @@ bool BlurEffect::eventFilter(QObject *watched, QEvent *event)
 
 bool BlurEffect::enabledByDefault()
 {
-    /*GLPlatform *gl = GLPlatform::instance();
+    /*const auto context = effects->openglContext();
+    if (!context || context->isSoftwareRenderer()) {
+        return false;
+    }
+    GLPlatform *gl = context->glPlatform();
 
     if (gl->isIntel() && gl->chipClass() < SandyBridge) {
         return false;
@@ -361,17 +380,13 @@ bool BlurEffect::enabledByDefault()
     // The blur effect works, but is painfully slow (FPS < 5) on Mali and VideoCore
     if (gl->isLima() || gl->isVideoCore4() || gl->isVideoCore3D()) {
         return false;
-    }
-    if (gl->isSoftwareEmulation()) {
-        return false;
-    }*/
-
+    } */
     return false;
 }
 
 bool BlurEffect::supported()
 {
-    return effects->openglContext() && effects->openglContext()->checkSupported() && effects->openglContext()->supportsBlits();
+    return effects->openglContext() && (effects->openglContext()->supportsBlits() || effects->waylandDisplay());
 }
 
 bool BlurEffect::decorationSupportsBlurBehind(const EffectWindow *w) const
@@ -385,7 +400,7 @@ QRegion BlurEffect::decorationBlurRegion(const EffectWindow *w) const
         return QRegion();
     }
 
-    QRegion decorationRegion = QRegion(w->decoration()->rect()) - w->decorationInnerRect().toRect();
+    QRegion decorationRegion = QRegion(w->decoration()->rect()) - w->contentsRect().toRect();
     //! we return only blurred regions that belong to decoration region
     return decorationRegion.intersected(w->decoration()->blurRegion());
 }
@@ -401,18 +416,18 @@ QRegion BlurEffect::blurRegion(EffectWindow *w) const
             if (content->isEmpty()) {
                 // An empty region means that the blur effect should be enabled
                 // for the whole window.
-                region = w->rect().toRect();
+                region = w->contentsRect().toRect();
             } else {
-                if (frame.has_value()) {
-                    region = frame.value();
-                }
-                region += content->translated(w->contentsRect().topLeft().toPoint()) & w->decorationInnerRect().toRect();
+                region = content->translated(w->contentsRect().topLeft().toPoint()) & w->contentsRect().toRect();
+            }
+            if (frame.has_value()) {
+                region += frame.value();
             }
         } else if (frame.has_value()) {
             region = frame.value();
         }
 
-        //Apply LighlyShaders to blur region
+        // Apply LighlyShaders to blur region
         m_helper->roundBlurRegion(w, &region);
     }
 
@@ -564,18 +579,32 @@ void BlurEffect::blur(const RenderTarget &renderTarget, const RenderViewport &vi
         }
         blurShape = scaledShape;
     } else if (data.xTranslation() || data.yTranslation()) {
-        QRegion translated;
-        for (const QRect &r : blurShape) {
-            const QRectF t = QRectF(r).translated(data.xTranslation(), data.yTranslation());
-            const QPoint topLeft(std::ceil(t.x()), std::ceil(t.y()));
-            const QPoint bottomRight(std::floor(t.x() + t.width() - 1), std::floor(t.y() + t.height() - 1));
-            translated += QRect(topLeft, bottomRight);
-        }
-        blurShape = translated;
+        blurShape.translate(std::round(data.xTranslation()), std::round(data.yTranslation()));
     }
 
+    const QRect backgroundRect = blurShape.boundingRect();
+    const QRect deviceBackgroundRect = snapToPixelGrid(scaledRect(backgroundRect, viewport.scale()));
+    const auto opacity = w->opacity() * data.opacity();
+
     // Get the effective shape that will be actually blurred. It's possible that all of it will be clipped.
-    const QRegion effectiveShape = blurShape & region;
+    QList<QRectF> effectiveShape;
+    effectiveShape.reserve(blurShape.rectCount());
+    if (region != infiniteRegion()) {
+        for (const QRect &clipRect : region) {
+            const QRectF deviceClipRect = snapToPixelGridF(scaledRect(clipRect, viewport.scale()))
+                                              .translated(-deviceBackgroundRect.topLeft());
+            for (const QRect &shapeRect : blurShape) {
+                const QRectF deviceShapeRect = snapToPixelGridF(scaledRect(shapeRect.translated(-backgroundRect.topLeft()), viewport.scale()));
+                if (const QRectF intersected = deviceClipRect.intersected(deviceShapeRect); !intersected.isEmpty()) {
+                    effectiveShape.append(intersected);
+                }
+            }
+        }
+    } else {
+        for (const QRect &rect : blurShape) {
+            effectiveShape.append(snapToPixelGridF(scaledRect(rect.translated(-backgroundRect.topLeft()), viewport.scale())));
+        }
+    }
     if (effectiveShape.isEmpty()) {
         return;
     }
@@ -586,10 +615,6 @@ void BlurEffect::blur(const RenderTarget &renderTarget, const RenderViewport &vi
     if (renderTarget.texture()) {
         textureFormat = renderTarget.texture()->internalFormat();
     }
-
-    const QRect backgroundRect = blurShape.boundingRect();
-    const QRect deviceBackgroundRect = scaledRect(backgroundRect, viewport.scale()).toRect();
-    const auto opacity = w->opacity() * data.opacity();
 
     if (renderInfo.framebuffers.size() != (m_iterationCount + 1) || renderInfo.textures[0]->size() != backgroundRect.size() || renderInfo.textures[0]->internalFormat() != textureFormat) {
         renderInfo.framebuffers.clear();
@@ -626,7 +651,7 @@ void BlurEffect::blur(const RenderTarget &renderTarget, const RenderViewport &vi
     vbo->reset();
     vbo->setAttribLayout(std::span(GLVertexBuffer::GLVertex2DLayout), sizeof(GLVertex2D));
 
-    const int vertexCount = effectiveShape.rectCount() * 6;
+    const int vertexCount = effectiveShape.size() * 6;
     if (auto result = vbo->map<GLVertex2D>(6 + vertexCount)) {
         auto map = *result;
 
@@ -676,13 +701,11 @@ void BlurEffect::blur(const RenderTarget &renderTarget, const RenderViewport &vi
         }
 
         // The geometry that will be painted on screen, in device pixels.
-        for (const QRect &rect : effectiveShape) {
-            const QRectF localRect = scaledRect(rect, viewport.scale()).translated(-deviceBackgroundRect.topLeft());
-
-            const float x0 = std::round(localRect.left());
-            const float y0 = std::round(localRect.top());
-            const float x1 = std::round(localRect.right());
-            const float y1 = std::round(localRect.bottom());
+        for (const QRectF &rect : effectiveShape) {
+            const float x0 = rect.left();
+            const float y0 = rect.top();
+            const float x1 = rect.right();
+            const float y1 = rect.bottom();
 
             const float u0 = x0 / deviceBackgroundRect.width();
             const float v0 = 1.0f - y0 / deviceBackgroundRect.height();
@@ -851,7 +874,6 @@ bool BlurEffect::blocksDirectScanout() const
 {
     return false;
 }
-
 
 } // namespace KWin
 
