@@ -15,8 +15,8 @@ target_link_libraries(lightlyshaders_blur PRIVATE
     KWin::kwin
 
     KF6::ConfigGui
-
-    KDecoration2::KDecoration
+    PRIVATE XCB::XCB
+    KDecoration3::KDecoration
 
     lshelper
 )

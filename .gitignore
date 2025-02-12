@@ -1,1 +1,7 @@
 .DS_Store
+.cache/
+.vscode/
+.idea/
+build
+cmake-build*
+qt6build
