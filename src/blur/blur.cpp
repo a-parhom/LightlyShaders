@@ -385,7 +385,7 @@ QRegion BlurEffect::decorationBlurRegion(const EffectWindow *w) const
     }
     // QRectF decorationRect = w->decoration()->rect();
     // QPainterPath decorationPath;
-    QRegion decorationRegion = QRegion(w->decoration()->rect().toRect()) - w->contentsRect().toRect();
+    QRegion decorationRegion = QRegion(w->decoration()->rect().toAlignedRect()) - w->contentsRect().toRect();
     //! we return only blurred regions that belong to decoration region
     return decorationRegion.intersected(w->decoration()->blurRegion());
 }
