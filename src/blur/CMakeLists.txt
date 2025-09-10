@@ -22,3 +22,8 @@ target_link_libraries(lightlyshaders_blur PRIVATE
 )
 
 install(TARGETS lightlyshaders_blur DESTINATION ${KDE_INSTALL_PLUGINDIR}/kwin/effects/plugins)
+
+find_package(KWinX11 QUIET)
+if(KWinX11_FOUND)
+    add_subdirectory(x11)
+endif()

@@ -33,5 +33,9 @@ target_link_libraries(${LIGHTLYSHADERS}
     lshelper
 )
 
-
 install(TARGETS ${LIGHTLYSHADERS} DESTINATION ${KDE_INSTALL_PLUGINDIR}/kwin/effects/plugins)
+
+find_package(KWinX11 QUIET)
+if(KWinX11_FOUND)
+    add_subdirectory(x11)
+endif()
