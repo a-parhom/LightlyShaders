@@ -12,18 +12,18 @@
 namespace KWin
 {
 
-class BlurEffectConfig : public KCModule
-{
-    Q_OBJECT
+    class BlurEffectConfig : public KCModule
+    {
+        Q_OBJECT
 
-public:
-    explicit BlurEffectConfig(QObject *parent, const KPluginMetaData &data);
-    ~BlurEffectConfig() override;
+    public:
+        explicit BlurEffectConfig(QObject *parent, const KPluginMetaData &data);
+        ~BlurEffectConfig() override;
 
-    void save() override;
+        void save() override;
 
-private:
-    ::Ui::BlurEffectConfig ui;
-};
+    private:
+        ::Ui::BlurEffectConfig ui;
+    };
 
 } // namespace KWin

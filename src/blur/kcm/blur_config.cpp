@@ -5,7 +5,7 @@
 */
 #include "blur_config.h"
 
-//#include <config-kwin.h>
+// #include <config-kwin.h>
 
 // KConfigSkeleton
 #include "blurconfig.h"
@@ -13,34 +13,33 @@
 #include <KPluginFactory>
 #include "kwineffects_interface.h"
 
-
 namespace KWin
 {
-    
-K_PLUGIN_CLASS(BlurEffectConfig)
 
-BlurEffectConfig::BlurEffectConfig(QObject *parent, const KPluginMetaData &data)
-    : KCModule(parent, data)
-{
-    ui.setupUi(widget());
-    //BlurConfig::instance(KWIN_CONFIG);
-    BlurConfig::instance("kwinrc");
-    addConfig(BlurConfig::self(), widget());
-}
+    K_PLUGIN_CLASS(BlurEffectConfig)
 
-BlurEffectConfig::~BlurEffectConfig()
-{
-}
+    BlurEffectConfig::BlurEffectConfig(QObject *parent, const KPluginMetaData &data)
+        : KCModule(parent, data)
+    {
+        ui.setupUi(widget());
+        // BlurConfig::instance(KWIN_CONFIG);
+        BlurConfig::instance("kwinrc");
+        addConfig(BlurConfig::self(), widget());
+    }
 
-void BlurEffectConfig::save()
-{
-    KCModule::save();
+    BlurEffectConfig::~BlurEffectConfig()
+    {
+    }
 
-    OrgKdeKwinEffectsInterface interface(QStringLiteral("org.kde.KWin"),
-                                         QStringLiteral("/Effects"),
-                                         QDBusConnection::sessionBus());
-    interface.reconfigureEffect(QStringLiteral("lightlyshaders_blur"));
-}
+    void BlurEffectConfig::save()
+    {
+        KCModule::save();
+
+        OrgKdeKwinEffectsInterface interface(QStringLiteral("org.kde.KWin"),
+                                             QStringLiteral("/Effects"),
+                                             QDBusConnection::sessionBus());
+        interface.reconfigureEffect(QStringLiteral("lightlyshaders_blur"));
+    }
 
 } // namespace KWin
 

@@ -12,6 +12,8 @@
 #include "scene/item.h"
 
 #include <QList>
+#include <memory>
+#include <random>
 
 #include <unordered_map>
 
@@ -20,151 +22,154 @@
 namespace KWin
 {
 
-class BlurManagerInterface;
+    class BlurManagerInterface;
 
-struct BlurRenderData
-{
-    /// Temporary render targets needed for the Dual Kawase algorithm, the first texture
-    /// contains not blurred background behind the window, it's cached.
-    std::vector<std::unique_ptr<GLTexture>> textures;
-    std::vector<std::unique_ptr<GLFramebuffer>> framebuffers;
-};
-
-struct BlurEffectData
-{
-    /// The region that should be blurred behind the window
-    std::optional<QRegion> content;
-
-    /// The region that should be blurred behind the frame
-    std::optional<QRegion> frame;
-
-    /// The render data per screen. Screens can have different color spaces.
-    std::unordered_map<Output *, BlurRenderData> render;
-
-    ItemEffect windowEffect;
-};
-
-class BlurEffect : public KWin::Effect
-{
-    Q_OBJECT
-
-public:
-    BlurEffect();
-    ~BlurEffect() override;
-
-    static bool supported();
-    static bool enabledByDefault();
-
-    void reconfigure(ReconfigureFlags flags) override;
-    void prePaintScreen(ScreenPrePaintData &data, std::chrono::milliseconds presentTime) override;
-    void prePaintWindow(EffectWindow *w, WindowPrePaintData &data, std::chrono::milliseconds presentTime) override;
-    void drawWindow(const RenderTarget &renderTarget, const RenderViewport &viewport, EffectWindow *w, int mask, const QRegion &region, WindowPaintData &data) override;
-
-    bool provides(Feature feature) override;
-    bool isActive() const override;
-
-    int requestedEffectChainPosition() const override
+    struct BlurRenderData
     {
-        return 20;
-    }
-
-    bool eventFilter(QObject *watched, QEvent *event) override;
-
-    bool blocksDirectScanout() const override;
-
-public Q_SLOTS:
-    void slotWindowAdded(KWin::EffectWindow *w);
-    void slotWindowDeleted(KWin::EffectWindow *w);
-    void slotScreenRemoved(KWin::Output *screen);
-#if KWIN_BUILD_X11
-    void slotPropertyNotify(KWin::EffectWindow *w, long atom);
-#endif
-    void setupDecorationConnections(EffectWindow *w);
-
-private:
-    void initBlurStrengthValues();
-    QRegion blurRegion(EffectWindow *w) const;
-    QRegion decorationBlurRegion(const EffectWindow *w) const;
-    bool decorationSupportsBlurBehind(const EffectWindow *w) const;
-    bool shouldBlur(const EffectWindow *w, int mask, const WindowPaintData &data) const;
-    void updateBlurRegion(EffectWindow *w);
-    void blur(const RenderTarget &renderTarget, const RenderViewport &viewport, EffectWindow *w, int mask, const QRegion &region, WindowPaintData &data);
-    GLTexture *ensureNoiseTexture();
-
-private:
-    LSHelper *m_helper;
-
-    struct
-    {
-        std::unique_ptr<GLShader> shader;
-        int mvpMatrixLocation;
-        int offsetLocation;
-        int halfpixelLocation;
-    } m_downsamplePass;
-
-    struct
-    {
-        std::unique_ptr<GLShader> shader;
-        int mvpMatrixLocation;
-        int offsetLocation;
-        int halfpixelLocation;
-    } m_upsamplePass;
-
-    struct
-    {
-        std::unique_ptr<GLShader> shader;
-        int mvpMatrixLocation;
-        int noiseTextureSizeLocation;
-        int texStartPosLocation;
-
-        std::unique_ptr<GLTexture> noiseTexture;
-        qreal noiseTextureScale = 1.0;
-        int noiseTextureStength = 0;
-    } m_noisePass;
-
-    bool m_valid = false;
-#if KWIN_BUILD_X11
-    long net_wm_blur_region = 0;
-#endif
-    QRegion m_paintedArea; // keeps track of all painted areas (from bottom to top)
-    QRegion m_currentBlur; // keeps track of the currently blured area of the windows(from bottom to top)
-    Output *m_currentScreen = nullptr;
-
-    size_t m_iterationCount; // number of times the texture will be downsized to half size
-    int m_offset;
-    int m_expandSize;
-    int m_noiseStrength;
-
-    struct OffsetStruct
-    {
-        float minOffset;
-        float maxOffset;
-        int expandSize;
+        /// Temporary render targets needed for the Dual Kawase algorithm, the first texture
+        /// contains not blurred background behind the window, it's cached.
+        std::vector<std::unique_ptr<GLTexture>> textures;
+        std::vector<std::unique_ptr<GLFramebuffer>> framebuffers;
     };
 
-    QList<OffsetStruct> blurOffsets;
-
-    struct BlurValuesStruct
+    struct BlurEffectData
     {
-        int iteration;
-        float offset;
+        /// The region that should be blurred behind the window
+        std::optional<Region> content;
+
+        /// The region that should be blurred behind the frame
+        std::optional<Region> frame;
+
+        /// The render data per screen. Screens can have different color spaces.
+        std::unordered_map<LogicalOutput *, BlurRenderData> render;
+
+        ItemEffect windowEffect;
     };
 
-    QList<BlurValuesStruct> blurStrengthValues;
+    class BlurEffect : public KWin::Effect
+    {
+        Q_OBJECT
 
-    QMap<EffectWindow *, QMetaObject::Connection> windowBlurChangedConnections;
-    std::unordered_map<EffectWindow *, BlurEffectData> m_windows;
+    public:
+        BlurEffect();
+        ~BlurEffect() override;
 
-    static BlurManagerInterface *s_blurManager;
-    static QTimer *s_blurManagerRemoveTimer;
-};
+        static bool supported();
+        static bool enabledByDefault();
 
-inline bool BlurEffect::provides(Effect::Feature feature)
-{
-    if (feature == Blur) {
-        return true;
+        void reconfigure(ReconfigureFlags flags) override;
+        void prePaintScreen(ScreenPrePaintData &data, std::chrono::milliseconds presentTime) override;
+        void prePaintWindow(RenderView *view, EffectWindow *w, WindowPrePaintData &data, std::chrono::milliseconds presentTime) override;
+        void drawWindow(const RenderTarget &renderTarget, const RenderViewport &viewport, EffectWindow *w, int mask, const Region &region, WindowPaintData &data) override;
+
+        bool provides(Feature feature) override;
+        bool isActive() const override;
+
+        int requestedEffectChainPosition() const override
+        {
+            return 20;
+        }
+
+        bool eventFilter(QObject *watched, QEvent *event) override;
+
+        bool blocksDirectScanout() const override;
+
+    public Q_SLOTS:
+        void slotWindowAdded(KWin::EffectWindow *w);
+        void slotWindowDeleted(KWin::EffectWindow *w);
+        void slotScreenRemoved(KWin::LogicalOutput *screen);
+#if KWIN_BUILD_X11
+        void slotPropertyNotify(KWin::EffectWindow *w, long atom);
+#endif
+        void setupDecorationConnections(EffectWindow *w);
+
+    private:
+        void initBlurStrengthValues();
+        Region blurRegion(EffectWindow *w) const;
+        Region decorationBlurRegion(const EffectWindow *w) const;
+        bool decorationSupportsBlurBehind(const EffectWindow *w) const;
+        bool shouldBlur(const EffectWindow *w, int mask, const WindowPaintData &data) const;
+        void updateBlurRegion(EffectWindow *w);
+        void blur(const RenderTarget &renderTarget, const RenderViewport &viewport, EffectWindow *w, int mask, const Region &region, WindowPaintData &data);
+        GLTexture *ensureNoiseTexture();
+        QRegion calculateBlurShape(EffectWindow *w, const WindowPaintData &data) const;
+        void updateOffscreenTargets(const QSize &size, GLenum format, BlurRenderData &renderInfo);
+
+    private:
+        std::unique_ptr<LSHelper> m_helper;
+
+        struct
+        {
+            std::unique_ptr<GLShader> shader;
+            int mvpMatrixLocation;
+            int offsetLocation;
+            int halfpixelLocation;
+        } m_downsamplePass;
+
+        struct
+        {
+            std::unique_ptr<GLShader> shader;
+            int mvpMatrixLocation;
+            int offsetLocation;
+            int halfpixelLocation;
+        } m_upsamplePass;
+
+        struct
+        {
+            std::unique_ptr<GLShader> shader;
+            int mvpMatrixLocation;
+            int noiseTextureSizeLocation;
+            int texStartPosLocation;
+
+            std::unique_ptr<GLTexture> noiseTexture;
+            qreal noiseTextureScale = 1.0;
+            int noiseTextureStength = 0;
+        } m_noisePass;
+
+        bool m_valid = false;
+#if KWIN_BUILD_X11
+        long net_wm_blur_region = 0;
+#endif
+        Region m_paintedArea; // keeps track of all painted areas (from bottom to top)
+        Region m_currentBlur; // keeps track of the currently blured area of the windows(from bottom to top)
+        LogicalOutput *m_currentScreen = nullptr;
+
+        size_t m_iterationCount = 0; // number of times the texture will be downsized to half size
+        int m_offset = 0;
+        int m_expandSize = 0;
+        int m_noiseStrength = 0;
+
+        struct OffsetStruct
+        {
+            float minOffset;
+            float maxOffset;
+            int expandSize;
+        };
+
+        QList<OffsetStruct> blurOffsets;
+
+        struct BlurValuesStruct
+        {
+            int iteration;
+            float offset;
+        };
+
+        QList<BlurValuesStruct> blurStrengthValues;
+
+        QMap<EffectWindow *, QMetaObject::Connection> windowBlurChangedConnections;
+        std::unordered_map<EffectWindow *, BlurEffectData> m_windows;
+
+        static std::unique_ptr<BlurManagerInterface> s_blurManager;
+        static std::unique_ptr<QTimer> s_blurManagerRemoveTimer;
+    };
+
+    inline bool BlurEffect::provides(Effect::Feature feature)
+    {
+        if (feature == Blur)
+        {
+            return true;
+        }
+        return KWin::Effect::provides(feature);
     }
-    return KWin::Effect::provides(feature);
-}
 
 } // namespace KWin

@@ -1,0 +1,72 @@
+name: SonarCloud Code Analysis
+
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+    branches: [main, master]
+
+jobs:
+  sonarcloud:
+    name: SonarCloud with C/C++ Analysis
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Add KDE Neon repository
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y software-properties-common
+          # Adicionar repositório KDE (se disponível) ou instalar via outro método
+          echo "Tentando instalar dependências disponíveis..."
+
+      - name: Install build dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y cmake g++ extra-cmake-modules \
+            qt6-base-dev qt6-base-dev-tools qt6-tools-dev \
+            libqt6core5compat6-dev libqt6widgets6 \
+            libxkbcommon-dev libxcb1-dev \
+            libx11-dev libxext-dev libxrender-dev libxtst-dev \
+            libepoxy-dev wget unzip
+
+      - name: Install KF6 from source/backports
+        run: |
+          # Tentar encontrar pacotes KF6 disponíveis
+          sudo apt-cache search libkf6 2>/dev/null | head -20 || echo "KF6 não encontrado nos repositórios"
+          # Instalar o que estiver disponível
+          sudo apt-get install -y libkf6config-dev libkf6coreaddons-dev libkf6windowsystem-dev 2>/dev/null || \
+            echo "KF6 packages not available in standard repos"
+
+      - name: Download build-wrapper
+        run: |
+          wget -q https://sonarcloud.io/static/cpp/build-wrapper-linux-x86.zip
+          unzip -q build-wrapper-linux-x86.zip
+          mv build-wrapper-linux-x86-* build-wrapper
+
+      - name: Build with build-wrapper (if dependencies available)
+        continue-on-error: true
+        run: |
+          mkdir -p build
+          if cmake -S . -B build -DCMAKE_BUILD_TYPE=Release 2>/dev/null; then
+            ./build-wrapper/build-wrapper-linux-x86-64 --out-dir bw-output cmake --build build --parallel $(nproc)
+            echo "BUILD_SUCCESS=true" >> $GITHUB_ENV
+          else
+            echo "BUILD_SUCCESS=false" >> $GITHUB_ENV
+            echo "Compilação falhou - dependências não disponíveis"
+          fi
+
+      - name: Run SonarCloud Scanner
+        uses: SonarSource/sonarcloud-github-action@v2
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+        with:
+          args: >
+            -Dsonar.projectKey=helton-godoy_LightlyShaders
+            -Dsonar.organization=helton-godoy
+            -Dsonar.sources=src
+            -Dsonar.sourceEncoding=UTF-8
+            -Dsonar.exclusions=build/**,build-qt6/**,**/*.so,**/*.frag,**/*.vert,**/*.qrc,**/*.sh
+            ${{ env.BUILD_SUCCESS == 'true' && '-Dsonar.cfamily.build-wrapper-output=bw-output' || '' }}

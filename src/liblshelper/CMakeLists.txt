@@ -14,7 +14,6 @@ generate_export_header(lshelper
 
 target_link_libraries(lshelper
     Qt6::Core
-    Qt6::CorePrivate
     Qt6::Gui
     Qt6::DBus
 

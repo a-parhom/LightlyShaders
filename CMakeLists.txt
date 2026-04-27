@@ -4,7 +4,7 @@ project(lightlyshaders)
 set(PROJECT_VERSION "3.0.0")
 set(PROJECT_VERSION_MAJOR 0)
 
-set(KF_MIN_VERSION "5.240.0")
+set(KF_MIN_VERSION "6.0.0")
 set(QT_MIN_VERSION "6.6.0")
 set(QT_MAJOR_VERSION 6)
 
@@ -48,9 +48,7 @@ find_package(KF6 ${KF_MIN_VERSION} REQUIRED COMPONENTS
     I18n
     KIO
     Service
-    #Init
     Notifications
-    Service
     WidgetsAddons
     WindowSystem
     GuiAddons
@@ -73,4 +71,3 @@ find_package(KWinDBusInterface CONFIG REQUIRED)
 add_subdirectory(src)
 
 feature_summary(WHAT ALL FATAL_ON_MISSING_REQUIRED_PACKAGES)
-
