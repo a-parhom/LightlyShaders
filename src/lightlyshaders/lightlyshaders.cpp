@@ -77,10 +77,8 @@ LightlyShadersEffect::~LightlyShadersEffect() = default;
 void LightlyShadersEffect::windowAdded(EffectWindow *w)
 {
     m_helper.windowAdded(w);
-    if (!m_helper.isManaged(w)) {
-        return;
-    }
 
+    // Connected for every window, a reconfigure can change which ones are managed
     connect(w, &EffectWindow::windowFullScreenChanged, this, &LightlyShadersEffect::updateRedirect);
     connect(w, &EffectWindow::windowMaximizedStateChanged, this, &LightlyShadersEffect::updateRedirect);
     connect(w->window(), &Window::tileChanged, this, [this, w]() {
@@ -128,12 +126,10 @@ void LightlyShadersEffect::reconfigure(ReconfigureFlags flags)
     m_innerOutlineColor = LightlyShadersConfig::innerOutlineColor();
     m_outerOutlineColor = LightlyShadersConfig::outerOutlineColor();
 
-    // The maximized and tiled options may have changed
+    // Which windows are managed and the maximized and tiled options may have changed
     const auto stackingOrder = effects->stackingOrder();
     for (EffectWindow *window : stackingOrder) {
-        if (m_helper.isManaged(window)) {
-            updateRedirect(window);
-        }
+        updateRedirect(window);
     }
 
     effects->addRepaintFull();

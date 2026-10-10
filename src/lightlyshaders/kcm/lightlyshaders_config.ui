@@ -229,6 +229,26 @@
       </widget>
      </item>
      <item>
+      <widget class="QLabel" name="excludedWindowClassesLabel">
+       <property name="text">
+        <string>Excluded window classes (comma separated):</string>
+       </property>
+       <property name="buddy">
+        <cstring>kcfg_ExcludedWindowClasses</cstring>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="kcfg_ExcludedWindowClasses">
+       <property name="placeholderText">
+        <string>e.g. yakuake, org.kde.kate</string>
+       </property>
+       <property name="toolTip">
+        <string>Windows whose class contains one of these names, ignoring case, keep their square corners</string>
+       </property>
+      </widget>
+     </item>
+     <item>
       <spacer name="verticalSpacer">
        <property name="orientation">
         <enum>Qt::Vertical</enum>

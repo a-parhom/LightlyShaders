@@ -5,7 +5,6 @@
 #include <window.h>
 
 #include <QRegularExpression>
-#include <QStringList>
 
 #include <algorithm>
 
@@ -20,6 +19,11 @@ static bool isMaximized(EffectWindow *w)
 static bool isTiled(EffectWindow *w)
 {
     return w->window()->tile() != nullptr;
+}
+
+static bool hasShadow(EffectWindow *w)
+{
+    return w->expandedGeometry().size() != w->frameGeometry().size();
 }
 
 void LSHelper::reconfigure()
@@ -39,14 +43,24 @@ void LSHelper::reconfigure()
 
     // The shadow sampling offset has to stay inside the corner
     m_shadowOffset = std::clamp(m_shadowOffset, 0, std::max(m_size - 1, 0));
+
+    m_excludedClasses.clear();
+    const QStringList excluded = LightlyShadersConfig::excludedWindowClasses().split(QLatin1Char(','), Qt::SkipEmptyParts);
+    for (const QString &windowClass : excluded) {
+        if (const QString trimmed = windowClass.trimmed(); !trimmed.isEmpty()) {
+            m_excludedClasses.append(trimmed);
+        }
+    }
+
+    // The excluded classes may have changed
+    m_managed.clear();
+    const auto stackingOrder = effects->stackingOrder();
+    for (EffectWindow *window : stackingOrder) {
+        windowAdded(window);
+    }
 }
 
-bool LSHelper::hasShadow(EffectWindow *w)
-{
-    return w->expandedGeometry().size() != w->frameGeometry().size();
-}
-
-bool LSHelper::isManagedWindow(EffectWindow *w)
+bool LSHelper::isManagedWindow(EffectWindow *w) const
 {
     // Shells, docks and launchers that draw their own shape, matched by window class
     // when they don't have a server side decoration
@@ -66,13 +80,18 @@ bool LSHelper::isManagedWindow(EffectWindow *w)
     };
 
     if (w->isDesktop() || w->isPopupMenu() || w->isTooltip() || w->isSpecialWindow() || w->isDropdownMenu() || w->isPopupWindow() || w->isLockScreen()
-        || w->isSplash() || w->isOnScreenDisplay() || w->isUtility() || w->isDock() || w->isToolbar() || w->isMenu())
+        || w->isSplash() || w->isOnScreenDisplay() || w->isUtility() || w->isDock() || w->isToolbar() || w->isMenu()) {
         return false;
+    }
 
     const QString windowClass = w->windowClass();
     const auto classContains = [&windowClass](const QString &name) {
         return windowClass.contains(name, Qt::CaseInsensitive);
     };
+
+    if (std::any_of(m_excludedClasses.cbegin(), m_excludedClasses.cend(), classContains)) {
+        return false;
+    }
 
     if (!w->hasDecoration()) {
         if (std::any_of(undecoratedExclusions.cbegin(), undecoratedExclusions.cend(), classContains)) {
@@ -83,16 +102,19 @@ bool LSHelper::isManagedWindow(EffectWindow *w)
         }
     }
 
-    if (classContains(QStringLiteral("xwaylandvideobridge")))
+    if (classContains(QStringLiteral("xwaylandvideobridge"))) {
         return false;
+    }
 
     // JetBrains IDEs use normal windows captioned "win<N>" for their popups
     static const QRegularExpression jetbrainsPopup(QStringLiteral("win[0-9]+"));
-    if (classContains(QStringLiteral("jetbrains")) && w->caption().contains(jetbrainsPopup))
+    if (classContains(QStringLiteral("jetbrains")) && w->caption().contains(jetbrainsPopup)) {
         return false;
+    }
 
-    if (classContains(QStringLiteral("plasma")) && !w->isNormalWindow() && !w->isDialog() && !w->isModal())
+    if (classContains(QStringLiteral("plasma")) && !w->isNormalWindow() && !w->isDialog() && !w->isModal()) {
         return false;
+    }
 
     return true;
 }
