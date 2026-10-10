@@ -57,8 +57,12 @@ find_package(KWinDBusInterface CONFIG REQUIRED)
 
 add_subdirectory(src)
 
+if(BUILD_TESTING)
+    add_subdirectory(tests)
+endif()
+
 # "make clang-format" formats our own sources, src/blur is kept as close to KWin's blur as possible
-file(GLOB_RECURSE ALL_CLANG_FORMAT_SOURCE_FILES src/lightlyshaders/*.cpp src/lightlyshaders/*.h src/liblshelper/*.cpp src/liblshelper/*.h)
+file(GLOB_RECURSE ALL_CLANG_FORMAT_SOURCE_FILES src/lightlyshaders/*.cpp src/lightlyshaders/*.h src/liblshelper/*.cpp src/liblshelper/*.h tests/*.cpp)
 kde_clang_format(${ALL_CLANG_FORMAT_SOURCE_FILES})
 
 feature_summary(WHAT ALL FATAL_ON_MISSING_REQUIRED_PACKAGES)

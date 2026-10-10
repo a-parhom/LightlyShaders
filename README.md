@@ -38,6 +38,9 @@ cmake -B build -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build && sudo cmake 
 
 Log out and back in afterwards, KWin only loads effects at startup.
 
+## Tests
+`ctest --test-dir build` checks the settings and renders the shaders on the GPU, so run it after changing them or after a KWin update. The shader tests are skipped when no GPU is available.
+
 ## Note
 After some updates of Plasma (or Qt) this plugin needs to be recompiled in order to work with changes introduced to KWin. If the effects disappear from the Desktop Effects list after an update, rebuild and reinstall.
 
