@@ -23,6 +23,12 @@ include(KDEInstallDirs)
 include(KDECMakeSettings)
 include(KDECompilerSettings NO_POLICY_SCOPE)
 
+# KWin's effect factory macros declare a Q_OBJECT class, let AutoMoc know
+list(APPEND CMAKE_AUTOMOC_MACRO_NAMES
+    KWIN_EFFECT_FACTORY_SUPPORTED
+    KWIN_EFFECT_FACTORY_SUPPORTED_ENABLED
+)
+
 find_package(Qt6 ${QT_MIN_VERSION} CONFIG REQUIRED COMPONENTS
     Core
     DBus
