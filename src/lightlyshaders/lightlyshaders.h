@@ -61,6 +61,7 @@ private:
     void windowAdded(EffectWindow *w);
     void windowDeleted(EffectWindow *w);
     void updateRedirect(EffectWindow *w);
+    bool drawsCorners(EffectWindow *w) const;
 
     LSHelper m_helper;
     // Windows currently drawn offscreen through the shader

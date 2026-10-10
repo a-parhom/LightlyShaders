@@ -26,6 +26,9 @@ public:
     bool isManaged(EffectWindow *w) const;
     // Whether the corners should be drawn right now (not fullscreen, not skipped while maximized)
     bool shouldRound(EffectWindow *w) const;
+    // Whether the window is big enough to have rounded corners. Tiny helper windows
+    // would otherwise be drawn as a small circle or outline.
+    bool cornersFit(EffectWindow *w) const;
 
     int roundness() const
     {

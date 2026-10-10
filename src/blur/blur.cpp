@@ -794,7 +794,7 @@ void BlurEffect::blur(const RenderTarget &renderTarget, const RenderViewport &vi
     // LightlyShaders: windows it rounds get their blur clipped to the same corner shape
     BorderRadius cornerRadius = w->window()->borderRadius();
     float cornerExponent = 2.0;
-    if (m_helper.shouldRound(w)) {
+    if (m_helper.shouldRound(w) && m_helper.cornersFit(w)) {
         cornerRadius = BorderRadius(m_helper.roundness());
         if (m_helper.cornersType() == LSHelper::SquircledCorners) {
             cornerExponent = m_helper.squircleRatio();

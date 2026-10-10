@@ -113,4 +113,10 @@ bool LSHelper::shouldRound(EffectWindow *w) const
     return isManaged(w) && !w->isFullScreen() && !(m_disabledForMaximized && isMaximized(w));
 }
 
+bool LSHelper::cornersFit(EffectWindow *w) const
+{
+    const RectF frame = w->frameGeometry();
+    return frame.width() >= 2 * m_size && frame.height() >= 2 * m_size;
+}
+
 } // namespace KWin

@@ -139,7 +139,7 @@ void LightlyShadersEffect::prePaintWindow(RenderView *view, EffectWindow *w, Win
 {
     // The rounded corners are see-through, so the window must not occlude what is below it.
     // KWin no longer lets effects carve parts out of the opaque region, it's all or nothing.
-    if (m_redirected.contains(w)) {
+    if (drawsCorners(w)) {
         data.setTranslucent();
     }
 
@@ -154,7 +154,7 @@ void LightlyShadersEffect::drawWindow(const RenderTarget &renderTarget,
                                       WindowPaintData &data)
 {
     const bool visible = viewport.renderRect().intersects(w->expandedGeometry()) || (mask & PAINT_WINDOW_TRANSFORMED);
-    if (!m_redirected.contains(w) || !visible) {
+    if (!drawsCorners(w) || !visible) {
         effects->drawWindow(renderTarget, viewport, w, mask, deviceRegion, data);
         return;
     }
@@ -185,6 +185,11 @@ void LightlyShadersEffect::drawWindow(const RenderTarget &renderTarget,
     OffscreenEffect::drawWindow(renderTarget, viewport, w, mask, deviceRegion, data);
 
     sm->popShader();
+}
+
+bool LightlyShadersEffect::drawsCorners(EffectWindow *w) const
+{
+    return m_redirected.contains(w) && m_helper.cornersFit(w);
 }
 
 bool LightlyShadersEffect::supported()
