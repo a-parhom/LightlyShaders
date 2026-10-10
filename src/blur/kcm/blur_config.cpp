@@ -9,12 +9,12 @@
 #include "blurconfig.h"
 
 #include <KPluginFactory>
-#include "kwineffects_interface.h"
-
+#include <kwineffects_interface.h>
 
 namespace KWin
 {
 
+// Inside the namespace, the macro can't take a qualified class name outside of KWin's own build
 K_PLUGIN_CLASS(BlurEffectConfig)
 
 BlurEffectConfig::BlurEffectConfig(QObject *parent, const KPluginMetaData &data)

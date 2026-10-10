@@ -6,8 +6,12 @@
 
 #include <QBitmap>
 #include <QPainter>
+#include <QRegion>
 #include <QRegularExpression>
+#include <QStringList>
 #include <QtMath>
+
+#include <algorithm>
 
 namespace KWin {
 
@@ -33,7 +37,7 @@ LSHelper::reconfigure()
     m_disabledForMaximized = LightlyShadersConfig::disabledForMaximized();
 
     if(m_cornersType == SquircledCorners) {
-        m_size = m_size * 0.5 * m_squircleRatio;
+        m_size = static_cast<int>(m_size * 0.5 * m_squircleRatio);
     }
 
     // The shadow sampling offset has to stay inside the corner
@@ -48,18 +52,26 @@ LSHelper::setMaskRegions()
     const int size = m_size + m_shadowOffset;
     const QImage img = genMaskImg(size);
 
-    // Indexed by TopLeft, TopRight, BottomRight, BottomLeft
+    // Indexed by TopLeft, TopRight, BottomRight, BottomLeft: where each corner
+    // is in the mask image, and where it goes relative to its window corner
     const QPoint origins[NCorners] = {
         QPoint(0, 0),
         QPoint(size, 0),
         QPoint(size, size),
         QPoint(0, size),
     };
+    const QPoint offsets[NCorners] = {
+        QPoint(-m_shadowOffset + 1, -m_shadowOffset + 1),
+        QPoint(-m_size - 1, -m_shadowOffset + 1),
+        QPoint(-m_size - 1, -m_size - 1),
+        QPoint(-m_shadowOffset + 1, -m_size - 1),
+    };
 
     for (int corner = 0; corner < NCorners; ++corner) {
         const QImage cornerImg = img.copy(QRect(origins[corner], QSize(size, size)))
                                      .createMaskFromColor(QColor(Qt::black).rgb(), Qt::MaskOutColor);
-        m_maskRegions[corner] = QRegion(QBitmap::fromImage(cornerImg, Qt::DiffuseAlphaDither));
+        const QRegion mask(QBitmap::fromImage(cornerImg, Qt::DiffuseAlphaDither));
+        m_cornerMasks[corner] = RegionF(mask.translated(offsets[corner]));
     }
 }
 
@@ -70,23 +82,14 @@ LSHelper::roundBlurRegion(EffectWindow *w, RegionF *blur_region) const
         return;
     }
 
-    const QRectF geo(w->frameGeometry());
+    // The blur region is relative to the window's top left corner
+    const int width = static_cast<int>(w->frameGeometry().width());
+    const int height = static_cast<int>(w->frameGeometry().height());
 
-    QRegion top_left = m_maskRegions[TopLeft];
-    top_left.translate(0-m_shadowOffset+1, 0-m_shadowOffset+1);
-    *blur_region = blur_region->subtracted(RegionF(top_left));
-
-    QRegion top_right = m_maskRegions[TopRight];
-    top_right.translate(geo.width() - m_size-1, 0-m_shadowOffset+1);
-    *blur_region = blur_region->subtracted(RegionF(top_right));
-
-    QRegion bottom_right = m_maskRegions[BottomRight];
-    bottom_right.translate(geo.width() - m_size-1, geo.height()-m_size-1);
-    *blur_region = blur_region->subtracted(RegionF(bottom_right));
-
-    QRegion bottom_left = m_maskRegions[BottomLeft];
-    bottom_left.translate(0-m_shadowOffset+1, geo.height()-m_size-1);
-    *blur_region = blur_region->subtracted(RegionF(bottom_left));
+    *blur_region -= m_cornerMasks[TopLeft];
+    *blur_region -= m_cornerMasks[TopRight].translated(width, 0);
+    *blur_region -= m_cornerMasks[BottomRight].translated(width, height);
+    *blur_region -= m_cornerMasks[BottomLeft].translated(0, height);
 }
 
 QPainterPath
@@ -151,6 +154,23 @@ LSHelper::hasShadow(EffectWindow *w)
 bool
 LSHelper::isManagedWindow(EffectWindow *w)
 {
+    // Shells, docks and launchers that draw their own shape, matched by window class
+    // when they don't have a server side decoration
+    static const QStringList undecoratedExclusions = {
+        QStringLiteral("plasma"),
+        QStringLiteral("krunner"),
+        QStringLiteral("sddm"),
+        QStringLiteral("vmware-user"),
+        QStringLiteral("latte-dock"),
+        QStringLiteral("lattedock"),
+        QStringLiteral("plank"),
+        QStringLiteral("cairo-dock"),
+        QStringLiteral("albert"),
+        QStringLiteral("ulauncher"),
+        QStringLiteral("ksplash"),
+        QStringLiteral("ksmserver"),
+    };
+
     if (w->isDesktop()
             || w->isPopupMenu()
             || w->isTooltip()
@@ -166,33 +186,29 @@ LSHelper::isManagedWindow(EffectWindow *w)
             || w->isMenu())
         return false;
 
-    if (
-            (!w->hasDecoration()
-                && (
-                    w->windowClass().contains("plasma", Qt::CaseInsensitive)
-                    || w->windowClass().contains("krunner", Qt::CaseInsensitive)
-                    || w->windowClass().contains("sddm", Qt::CaseInsensitive)
-                    || w->windowClass().contains("vmware-user", Qt::CaseInsensitive)
-                    || w->windowClass().contains("latte-dock", Qt::CaseInsensitive)
-                    || w->windowClass().contains("lattedock", Qt::CaseInsensitive)
-                    || w->windowClass().contains("plank", Qt::CaseInsensitive)
-                    || w->windowClass().contains("cairo-dock", Qt::CaseInsensitive)
-                    || w->windowClass().contains("albert", Qt::CaseInsensitive)
-                    || w->windowClass().contains("ulauncher", Qt::CaseInsensitive)
-                    || w->windowClass().contains("ksplash", Qt::CaseInsensitive)
-                    || w->windowClass().contains("ksmserver", Qt::CaseInsensitive)
-                    || (w->windowClass().contains("reaper", Qt::CaseInsensitive) && !hasShadow(w))
-                )
-            )
-            || w->windowClass().contains("xwaylandvideobridge", Qt::CaseInsensitive)
+    const QString windowClass = w->windowClass();
+    const auto classContains = [&windowClass](const QString &name) {
+        return windowClass.contains(name, Qt::CaseInsensitive);
+    };
 
-        ) return false;
+    if (!w->hasDecoration()) {
+        if (std::any_of(undecoratedExclusions.cbegin(), undecoratedExclusions.cend(), classContains)) {
+            return false;
+        }
+        if (classContains(QStringLiteral("reaper")) && !hasShadow(w)) {
+            return false;
+        }
+    }
 
-    static const QRegularExpression jetbrainsPopup(QStringLiteral("win[0-9]+"));
-    if(w->windowClass().contains("jetbrains", Qt::CaseInsensitive) && w->caption().contains(jetbrainsPopup))
+    if (classContains(QStringLiteral("xwaylandvideobridge")))
         return false;
 
-    if (w->windowClass().contains("plasma", Qt::CaseInsensitive) && !w->isNormalWindow() && !w->isDialog() && !w->isModal())
+    // JetBrains IDEs use normal windows captioned "win<N>" for their popups
+    static const QRegularExpression jetbrainsPopup(QStringLiteral("win[0-9]+"));
+    if (classContains(QStringLiteral("jetbrains")) && w->caption().contains(jetbrainsPopup))
+        return false;
+
+    if (classContains(QStringLiteral("plasma")) && !w->isNormalWindow() && !w->isDialog() && !w->isModal())
         return false;
 
     return true;

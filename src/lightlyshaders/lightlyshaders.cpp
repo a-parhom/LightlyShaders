@@ -31,12 +31,6 @@
 
 Q_LOGGING_CATEGORY(LIGHTLYSHADERS, "kwin_effect_lightlyshaders", QtWarningMsg)
 
-static void ensureResources()
-{
-    // Must initialize resources manually because the effect is a static lib.
-    Q_INIT_RESOURCE(lightlyshaders);
-}
-
 namespace KWin {
 
 KWIN_EFFECT_FACTORY_SUPPORTED(LightlyShadersEffect,
@@ -55,8 +49,6 @@ static RectF scaled(const RectF &rect, qreal scale)
 
 LightlyShadersEffect::LightlyShadersEffect()
 {
-    ensureResources();
-
     reconfigure(ReconfigureAll);
 
     m_shader = ShaderManager::instance()->generateShaderFromFile(ShaderTrait::MapTexture, QString(), QStringLiteral(":/effects/lightlyshaders/shaders/lightlyshaders.frag"));
@@ -101,9 +93,7 @@ LightlyShadersEffect::windowAdded(EffectWindow *w)
     }
 
     connect(w, &EffectWindow::windowFullScreenChanged, this, &LightlyShadersEffect::updateRedirect);
-    connect(w, &EffectWindow::windowMaximizedStateChanged, this, [this](EffectWindow *w) {
-        updateRedirect(w);
-    });
+    connect(w, &EffectWindow::windowMaximizedStateChanged, this, &LightlyShadersEffect::updateRedirect);
     updateRedirect(w);
 }
 

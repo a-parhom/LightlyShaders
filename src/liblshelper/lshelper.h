@@ -5,7 +5,6 @@
 
 #include <QImage>
 #include <QPainterPath>
-#include <QRegion>
 #include <QSet>
 
 namespace KWin {
@@ -50,7 +49,9 @@ private:
     int m_shadowOffset = 0;
     bool m_disabledForMaximized = false;
 
-    QRegion m_maskRegions[NCorners];
+    // Parts of each corner to cut from the blur region, already offset relative to
+    // their corner of the window. Converted once here since blur asks every frame.
+    RegionF m_cornerMasks[NCorners];
     QSet<EffectWindow *> m_managed;
 };
 
