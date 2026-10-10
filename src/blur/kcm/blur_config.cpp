@@ -5,8 +5,6 @@
 */
 #include "blur_config.h"
 
-//#include <config-kwin.h>
-
 // KConfigSkeleton
 #include "blurconfig.h"
 
@@ -16,15 +14,14 @@
 
 namespace KWin
 {
-    
+
 K_PLUGIN_CLASS(BlurEffectConfig)
 
 BlurEffectConfig::BlurEffectConfig(QObject *parent, const KPluginMetaData &data)
     : KCModule(parent, data)
 {
     ui.setupUi(widget());
-    //BlurConfig::instance(KWIN_CONFIG);
-    BlurConfig::instance("kwinrc");
+    BlurConfig::instance(QStringLiteral("kwinrc"));
     addConfig(BlurConfig::self(), widget());
 }
 

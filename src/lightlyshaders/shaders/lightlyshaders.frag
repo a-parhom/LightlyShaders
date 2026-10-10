@@ -16,15 +16,13 @@ uniform vec4 outer_outline_color;
 uniform int squircle_ratio;
 uniform bool is_squircle;
 
-uniform mat4 modelViewProjectionMatrix;
-
 uniform vec4 modulation;
-uniform float saturation;
 
 in vec2 texcoord0;
 out vec4 fragColor;
 
 #include "colormanagement.glsl"
+#include "saturation.glsl"
 
 //Used code from https://github.com/yilozt/rounded-window-corners project
 float squircleBounds(vec2 p, vec2 center, float clip_radius)
@@ -43,7 +41,7 @@ float squircleBounds(vec2 p, vec2 center, float clip_radius)
 //Used code from https://github.com/yilozt/rounded-window-corners project
 float circleBounds(vec2 p, vec2 center, float clip_radius)
 {
-    vec2 delta = p - vec2(center.x, center.y);
+    vec2 delta = p - center;
     float dist_squared = dot(delta, delta);
 
     float outer_radius = clip_radius + 0.5;
@@ -57,14 +55,17 @@ float circleBounds(vec2 p, vec2 center, float clip_radius)
     return outer_radius - sqrt(dist_squared);
 }
 
+float cornerBounds(vec2 p, vec2 center, float clip_radius)
+{
+    if(is_squircle) {
+        return squircleBounds(p, center, clip_radius);
+    }
+    return circleBounds(p, center, clip_radius);
+}
+
 vec4 shapeWindow(vec4 tex, vec2 p, vec2 center, float clip_radius)
 {
-    float alpha;
-    if(is_squircle) {
-        alpha = squircleBounds(p, center, clip_radius);
-    } else {
-        alpha = circleBounds(p, center, clip_radius);
-    }
+    float alpha = cornerBounds(p, center, clip_radius);
     return vec4(tex.rgb*alpha, min(alpha, tex.a));
 }
 
@@ -79,12 +80,7 @@ vec4 shapeShadowWindow(vec2 start, vec4 tex, vec2 p, vec2 center, float clip_rad
 
     vec4 texShadow = texShadowHorCur + (texShadowVerCur - texShadow0);
 
-    float alpha;
-    if(is_squircle) {
-        alpha = squircleBounds(p, center, clip_radius);
-    } else {
-        alpha = circleBounds(p, center, clip_radius);
-    }
+    float alpha = cornerBounds(p, center, clip_radius);
 
     if(alpha == 0.0) {
         return texShadow;
@@ -121,18 +117,9 @@ vec4 cornerOutline(vec4 outColor, bool inner, vec2 coord0, float radius, vec2 ce
         }
     }
 
-    float outline_alpha;
-    float outline_alpha_inner;
-    float outline_alpha_outer;
-
-    if(is_squircle) {
-        outline_alpha_inner = squircleBounds(coord0, vec2(center.x, center.y), radius + radius_delta_inner);
-        outline_alpha_outer = squircleBounds(coord0, vec2(center.x, center.y), radius + radius_delta_outer);
-    } else {
-        outline_alpha_inner = circleBounds(coord0, vec2(center.x, center.y), radius + radius_delta_inner);
-        outline_alpha_outer = circleBounds(coord0, vec2(center.x, center.y), radius + radius_delta_outer);
-    }
-    outline_alpha = 1.0 - clamp(abs(outline_alpha_outer - outline_alpha_inner), 0.0, 1.0);
+    float outline_alpha_inner = cornerBounds(coord0, center, radius + radius_delta_inner);
+    float outline_alpha_outer = cornerBounds(coord0, center, radius + radius_delta_outer);
+    float outline_alpha = 1.0 - clamp(abs(outline_alpha_outer - outline_alpha_inner), 0.0, 1.0);
     outColor = mix(outColor, vec4(outline_color.rgb,1.0), (1.0-outline_alpha) * outline_color.a);
     return outColor;
 }
@@ -438,17 +425,10 @@ void main()
         }
     }
 
+    // Same output steps as KWin's own window shader
     outColor = sourceEncodingToNitsInDestinationColorspace(outColor);
-
-    //Support opacity
-    if (saturation != 1.0) {
-        vec3 desaturated = outColor.rgb * vec3( 0.30, 0.59, 0.11 );
-        desaturated = vec3( dot( desaturated, outColor.rgb ));
-        outColor.rgb = outColor.rgb * vec3( saturation ) + desaturated * vec3( 1.0 - saturation );
-    }
+    outColor = adjustSaturation(outColor);
     outColor *= modulation;
-
-    //Output result
+    outColor.rgb = doTonemapping(outColor.rgb);
     fragColor = nitsToDestinationEncoding(outColor);
-    //fragColor = vec4(tex.r, tex.g, 1.0, tex.a);
 }

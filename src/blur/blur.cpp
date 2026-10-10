@@ -90,8 +90,6 @@ BlurEffect::BlurEffect()
     BlurConfig::instance(effects->config());
     ensureResources();
 
-    m_helper = std::make_unique<LSHelper>();
-
     m_onscreenPass.shader = ShaderManager::instance()->generateShaderFromFile(ShaderTrait::MapTexture,
                                                                               QStringLiteral(":/effects/blur/shaders/vertex.vert"),
                                                                               QStringLiteral(":/effects/blur/shaders/onscreen.frag"));
@@ -264,7 +262,7 @@ void BlurEffect::reconfigure(ReconfigureFlags flags)
         data.blurItem->setPixelsToExpandRepaintsBelowOpaqueRegions(m_expandSize);
     }
 
-    m_helper->reconfigure();
+    m_helper.reconfigure();
 
     // Update all windows for the blur to take effect
     effects->addRepaintFull();
@@ -349,7 +347,7 @@ void BlurEffect::slotWindowAdded(EffectWindow *w)
     }
 
     // Check if window needs rounding corners
-    m_helper->blurWindowAdded(w);
+    m_helper.windowAdded(w);
 
     setupDecorationConnections(w);
     connect(w, &EffectWindow::windowDecorationChanged, this, [this, w]() {
@@ -371,7 +369,7 @@ void BlurEffect::slotWindowDeleted(EffectWindow *w)
         windowBlurChangedConnections.erase(it);
     }
 
-    m_helper->blurWindowDeleted(w);
+    m_helper.windowDeleted(w);
 }
 
 void BlurEffect::slotViewRemoved(KWin::RenderView *view)
@@ -468,7 +466,7 @@ RegionF BlurEffect::blurRegion(EffectWindow *w) const
         }
 
         // Apply LightlyShaders to blur region
-        m_helper->roundBlurRegion(w, &region);
+        m_helper.roundBlurRegion(w, &region);
     }
 
     return region;

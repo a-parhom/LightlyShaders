@@ -9,22 +9,13 @@ qt_add_dbus_interface(kwin_lightlyshaders_config_SOURCES ${KWIN_EFFECTS_INTERFAC
 add_library(kwin_lightlyshaders_config MODULE ${kwin_lightlyshaders_config_SOURCES})
 
 target_link_libraries(kwin_lightlyshaders_config
-    KWin::kwin
-    Qt6::Widgets
-    Qt6::Core
     Qt6::DBus
-    Qt6::Gui
-    KF6::ConfigCore
-    KF6::CoreAddons
-    KF6::ConfigWidgets
+    Qt6::Widgets
     KF6::ConfigGui
-    KF6::GlobalAccel
-    KF6::WindowSystem
-    KF6::KCMUtils   
-    KF6::I18n         
-
-    lshelper
+    KF6::CoreAddons
+    KF6::I18n
+    KF6::KCMUtils
+    KF6::WidgetsAddons
 )
 
 install(TARGETS kwin_lightlyshaders_config DESTINATION ${KDE_INSTALL_PLUGINDIR}/kwin/effects/configs)
-

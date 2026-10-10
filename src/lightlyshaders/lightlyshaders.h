@@ -17,75 +17,64 @@
  *   Boston, MA 02110-1301, USA.
  */
 
-#ifndef LIGHTLYSHADERS_H
-#define LIGHTLYSHADERS_H
+#pragma once
 
-#include <effect/effecthandler.h>
 #include <effect/offscreeneffect.h>
 
 #include "lshelper.h"
 
+#include <QColor>
+
 namespace KWin {
 
-class GLTexture;
+class GLShader;
 
-class Q_DECL_EXPORT LightlyShadersEffect : public OffscreenEffect
+class LightlyShadersEffect : public OffscreenEffect
 {
     Q_OBJECT
 public:
     LightlyShadersEffect();
-    ~LightlyShadersEffect();
+    ~LightlyShadersEffect() override;
 
     static bool supported();
-    static bool enabledByDefault();
-
-    void setRoundness(const int r, LogicalOutput *s);
 
     void reconfigure(ReconfigureFlags flags) override;
-    void paintScreen(const RenderTarget &renderTarget, const RenderViewport &viewport, int mask, const Region &deviceRegion, LogicalOutput *s) override;
     void prePaintWindow(RenderView *view, EffectWindow *w, WindowPrePaintData &data) override;
-    void drawWindow(const RenderTarget &renderTarget, const RenderViewport &viewport, EffectWindow* w, int mask, const Region &deviceRegion, WindowPaintData& data) override;
-    virtual int requestedEffectChainPosition() const override { return 99; }
-
-protected Q_SLOTS:
-    void windowAdded(EffectWindow *window);
-    void windowDeleted(EffectWindow *window);
-    void windowMaximizedStateChanged(EffectWindow *window, bool horizontal, bool vertical);
-    void windowFullScreenChanged(EffectWindow *window);
-    void screenRemoved(LogicalOutput *screen);
+    void drawWindow(const RenderTarget &renderTarget, const RenderViewport &viewport, EffectWindow *w, int mask, const Region &deviceRegion, WindowPaintData &data) override;
+    int requestedEffectChainPosition() const override { return 99; }
 
 private:
-    enum { Top = 0, Bottom, NShad };
+    void windowAdded(EffectWindow *w);
+    void windowDeleted(EffectWindow *w);
+    void updateRedirect(EffectWindow *w);
 
-    struct LSWindowStruct
-    {
-        bool skipEffect;
-        bool isManaged;
-    };
+    LSHelper m_helper;
+    // Windows currently drawn offscreen through the shader
+    QSet<EffectWindow *> m_redirected;
 
-    struct LSScreenStruct
-    {
-        bool configured=false;
-        qreal scale=1.0;
-        float sizeScaled;
-    };
+    int m_innerOutlineWidth = 0;
+    int m_outerOutlineWidth = 0;
+    bool m_innerOutline = false;
+    bool m_outerOutline = false;
+    QColor m_innerOutlineColor;
+    QColor m_outerOutlineColor;
 
-    bool isValidWindow(EffectWindow *w);
-
-    QRectF scale(const QRectF rect, qreal scaleFactor);
-
-    std::unique_ptr<LSHelper> m_helper;
-
-    int m_size, m_innerOutlineWidth, m_outerOutlineWidth, m_roundness, m_shadowOffset, m_squircleRatio, m_cornersType;
-    bool m_innerOutline, m_outerOutline, m_darkTheme, m_disabledForMaximized;
-    QColor m_innerOutlineColor, m_outerOutlineColor;
     std::unique_ptr<GLShader> m_shader;
-    QSize m_corner;
-
-    std::unordered_map<LogicalOutput *, LSScreenStruct> m_screens;
-    QMap<EffectWindow *, LSWindowStruct> m_windows;
+    struct {
+        int frameSize;
+        int expandedSize;
+        int shadowSize;
+        int radius;
+        int shadowOffset;
+        int innerOutlineColor;
+        int outerOutlineColor;
+        int innerOutlineWidth;
+        int outerOutlineWidth;
+        int drawInnerOutline;
+        int drawOuterOutline;
+        int squircleRatio;
+        int isSquircle;
+    } m_uniforms;
 };
 
 } // namespace KWin
-
-#endif //LIGHTLYSHADERS_H

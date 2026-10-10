@@ -94,7 +94,7 @@ private:
     GLTexture *ensureNoiseTexture();
 
 private:
-    std::unique_ptr<LSHelper> m_helper;
+    LSHelper m_helper;
 
     struct
     {

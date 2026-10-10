@@ -1,47 +1,57 @@
-#include "liblshelper_export.h"
+#pragma once
 
 #include <core/region.h>
-#include <effect/effecthandler.h>
-#include <QRegion>
+#include <effect/effectwindow.h>
+
 #include <QImage>
 #include <QPainterPath>
-
-template <typename T> int signum(T val) {
-    return (T(0) < val) - (val < T(0));
-}
+#include <QRegion>
+#include <QSet>
 
 namespace KWin {
 
-class LIBLSHELPER_EXPORT LSHelper: public QObject
+// Corner shape settings and window bookkeeping shared by the
+// LightlyShaders effect and the LightlyShaders blur effect.
+class LSHelper
 {
-    Q_OBJECT
+public:
+    enum CornersType { RoundedCorners = 0, SquircledCorners };
 
-	public:
-		LSHelper();
-		~LSHelper();
+    void reconfigure();
 
-		void reconfigure();
-		QPainterPath superellipse(float size, int n, int translate);
-    	QImage genMaskImg(int size, bool mask, bool outer_rect);
-		void roundBlurRegion(EffectWindow *w, RegionF *region);
-		bool isManagedWindow(EffectWindow *w);
-		void blurWindowAdded(EffectWindow *w);
-		void blurWindowDeleted(EffectWindow *w);
-		int roundness();
+    void windowAdded(EffectWindow *w);
+    void windowDeleted(EffectWindow *w);
 
-		enum { RoundedCorners = 0, SquircledCorners };
-		enum { TopLeft = 0, TopRight, BottomRight, BottomLeft, NTex };
+    // Whether the window gets rounded corners at all, decided once when it's added
+    bool isManaged(EffectWindow *w) const;
+    // Whether the corners should be drawn right now (not fullscreen, not skipped while maximized)
+    bool shouldRound(EffectWindow *w) const;
 
-		QRegion m_maskRegions[NTex];
+    void roundBlurRegion(EffectWindow *w, RegionF *region) const;
 
-	private:
-		bool hasShadow(EffectWindow *w);
-		void setMaskRegions();
-		QRegion createMaskRegion(QImage img, int size, int corner);
+    int roundness() const { return m_size; }
+    int shadowOffset() const { return m_shadowOffset; }
+    int cornersType() const { return m_cornersType; }
+    int squircleRatio() const { return m_squircleRatio; }
 
-		int m_size, m_cornersType, m_squircleRatio, m_shadowOffset;
-		bool m_disabledForMaximized;
-		QList<EffectWindow *> m_managed;
+private:
+    enum { TopLeft = 0, TopRight, BottomRight, BottomLeft, NCorners };
+
+    static bool isManagedWindow(EffectWindow *w);
+    static bool hasShadow(EffectWindow *w);
+
+    void setMaskRegions();
+    QImage genMaskImg(int size) const;
+    QPainterPath superellipse(float size, int n, int translate) const;
+
+    int m_size = 0;
+    int m_cornersType = RoundedCorners;
+    int m_squircleRatio = 0;
+    int m_shadowOffset = 0;
+    bool m_disabledForMaximized = false;
+
+    QRegion m_maskRegions[NCorners];
+    QSet<EffectWindow *> m_managed;
 };
 
-} //namespace
+} // namespace KWin

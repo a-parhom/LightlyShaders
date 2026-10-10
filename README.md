@@ -8,11 +8,11 @@
 # LightlyShaders v3.0
  This is a fork of Luwx's [LightlyShaders](https://github.com/Luwx/LightlyShaders), which in turn is a fork of [ShapeCorners](https://sourceforge.net/projects/shapecorners/).  
 
- **It now also includes a fork of KWin Blur effect to fix the "korner bug".** It is disabled by default, you will have to enter Effects settings, disable the stock blur and enable the one with the "LightlyShaders" lable.
+ **It now also includes a fork of KWin Blur effect to fix the "korner bug".** It is disabled by default, you will have to enter Effects settings, disable the stock blur and enable the one with the "LightlyShaders" label.
 
  This effect works correctly with stock Plasma effects.
 
- ![default](https://github.com/a-parhom/LightlyShaders/blob/plasma6/screenshot.png)
+ ![default](screenshot.png)
 
 # Dependencies:
  
@@ -22,13 +22,20 @@ You will need qt6, kf6 and kwin development packages.
 
 # Manual installation
 ```
-git clone https://github.com/a-parhom/LightlyShaders
+git clone https://github.com/akano12/LightlyShaders
 
-cd LightlyShaders;
+cd LightlyShaders
 
-mkdir qt6build; cd qt6build; cmake ../ -DCMAKE_INSTALL_PREFIX=/usr && make && sudo make install
+cmake -B build -DCMAKE_INSTALL_PREFIX=/usr && cmake --build build && sudo cmake --install build
 ```
 
+Log out and back in afterwards, KWin only loads effects at startup.
+
 ## Note
-After some updates of Plasma this plugin may need to be recompiled in order to work with changes introduced to KWin.
+After some updates of Plasma (or Qt) this plugin needs to be recompiled in order to work with changes introduced to KWin. If the effects disappear from the Desktop Effects list after an update, rebuild and reinstall.
+
+Older versions installed a `liblshelper` library to `/usr/lib`, it is no longer needed and can be removed:
+```
+sudo rm /usr/lib/liblshelper.so*
+```
  
