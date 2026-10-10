@@ -15,10 +15,17 @@
  ![default](screenshot.png)
 
 # Dependencies:
- 
+
 Plasma >= 6.7.
- 
-You will need qt6, kf6 and kwin development packages.
+
+Arch Linux:
+```
+sudo pacman -S --needed base-devel cmake extra-cmake-modules kwin kdecoration qt6-base kconfig kcmutils ki18n kcoreaddons kwidgetsaddons libxcb
+```
+
+Other distributions need a C++ compiler, CMake, extra-cmake-modules and the development packages of KWin, KDecoration, Qt 6 and KDE Frameworks 6 (KConfig, KCMUtils, KI18n, KCoreAddons, KWidgetsAddons), usually named like `kwin-dev` or `kwin-devel`.
+
+If CMake reports `Could not find a package configuration file provided by "ECM"`, extra-cmake-modules is missing.
 
 # Manual installation
 ```
