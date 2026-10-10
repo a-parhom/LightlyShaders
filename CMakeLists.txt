@@ -22,6 +22,7 @@ include(FeatureSummary)
 include(KDEInstallDirs)
 include(KDECMakeSettings)
 include(KDECompilerSettings NO_POLICY_SCOPE)
+include(KDEClangFormat)
 
 # KWin's effect factory macros declare a Q_OBJECT class, let AutoMoc know
 list(APPEND CMAKE_AUTOMOC_MACRO_NAMES
@@ -55,5 +56,9 @@ find_package(KDecoration3 REQUIRED)
 find_package(KWinDBusInterface CONFIG REQUIRED)
 
 add_subdirectory(src)
+
+# "make clang-format" formats our own sources, src/blur is kept as close to KWin's blur as possible
+file(GLOB_RECURSE ALL_CLANG_FORMAT_SOURCE_FILES src/lightlyshaders/*.cpp src/lightlyshaders/*.h src/liblshelper/*.cpp src/liblshelper/*.h)
+kde_clang_format(${ALL_CLANG_FORMAT_SOURCE_FILES})
 
 feature_summary(WHAT ALL FATAL_ON_MISSING_REQUIRED_PACKAGES)

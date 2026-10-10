@@ -25,7 +25,8 @@
 
 #include <QColor>
 
-namespace KWin {
+namespace KWin
+{
 
 class GLShader;
 
@@ -40,10 +41,21 @@ public:
 
     void reconfigure(ReconfigureFlags flags) override;
     void prePaintWindow(RenderView *view, EffectWindow *w, WindowPrePaintData &data) override;
-    void drawWindow(const RenderTarget &renderTarget, const RenderViewport &viewport, EffectWindow *w, int mask, const Region &deviceRegion, WindowPaintData &data) override;
-    int requestedEffectChainPosition() const override { return 99; }
+    void drawWindow(const RenderTarget &renderTarget,
+                    const RenderViewport &viewport,
+                    EffectWindow *w,
+                    int mask,
+                    const Region &deviceRegion,
+                    WindowPaintData &data) override;
+    int requestedEffectChainPosition() const override
+    {
+        return 99;
+    }
     // Leave the paint chain while no window is rounded, e.g. during a fullscreen game
-    bool isActive() const override { return !m_redirected.isEmpty(); }
+    bool isActive() const override
+    {
+        return !m_redirected.isEmpty();
+    }
 
 private:
     void windowAdded(EffectWindow *w);

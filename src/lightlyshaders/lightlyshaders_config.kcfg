@@ -14,30 +14,30 @@
         <entry name="InnerOutline" type="Bool">
             <default>true</default>
         </entry>
-        <entry name="InnerOutlineColor" type = "Color">
+        <entry name="InnerOutlineColor" type="Color">
            <default>255, 255, 255, 75</default>
         </entry>
-        <entry name="InnerOutlineWidth" type = "Int">
+        <entry name="InnerOutlineWidth" type="Int">
             <default>1</default>
             <min>1</min>
             <max>10</max>
         </entry>
 
-        <entry name="OuterOutline" type = "Bool">
+        <entry name="OuterOutline" type="Bool">
             <default>true</default>
         </entry>
-        <entry name="OuterOutlineColor" type = "Color">
+        <entry name="OuterOutlineColor" type="Color">
            <default>0, 0, 0, 75</default>
         </entry>
-        <entry name="OuterOutlineWidth" type = "Int">
+        <entry name="OuterOutlineWidth" type="Int">
             <default>1</default>
             <min>1</min>
             <max>10</max>
         </entry>
 
-        <entry name="DisabledForMaximized" type = "Bool">
+        <entry name="DisabledForMaximized" type="Bool">
             <default>false</default>
-        </entry>        
+        </entry>
         <entry name="CornersType" type="Enum">
             <choices>
                 <choice name="RoundedCorners" />
@@ -45,12 +45,12 @@
             </choices>
             <default>RoundedCorners</default>
         </entry>
-        <entry name="SquircleRatio" type = "Int">
+        <entry name="SquircleRatio" type="Int">
             <default>5</default>
             <min>2</min>
             <max>12</max>
         </entry>
-        <entry name="ShadowOffset" type = "Int">
+        <entry name="ShadowOffset" type="Int">
             <default>2</default>
             <min>2</min>
             <max>6</max>

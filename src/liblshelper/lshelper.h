@@ -4,14 +4,18 @@
 
 #include <QSet>
 
-namespace KWin {
+namespace KWin
+{
 
 // Corner shape settings and window bookkeeping shared by the
 // LightlyShaders effect and the LightlyShaders blur effect.
 class LSHelper
 {
 public:
-    enum CornersType { RoundedCorners = 0, SquircledCorners };
+    enum CornersType {
+        RoundedCorners = 0,
+        SquircledCorners
+    };
 
     void reconfigure();
 
@@ -23,10 +27,22 @@ public:
     // Whether the corners should be drawn right now (not fullscreen, not skipped while maximized)
     bool shouldRound(EffectWindow *w) const;
 
-    int roundness() const { return m_size; }
-    int shadowOffset() const { return m_shadowOffset; }
-    CornersType cornersType() const { return m_cornersType; }
-    int squircleRatio() const { return m_squircleRatio; }
+    int roundness() const
+    {
+        return m_size;
+    }
+    int shadowOffset() const
+    {
+        return m_shadowOffset;
+    }
+    CornersType cornersType() const
+    {
+        return m_cornersType;
+    }
+    int squircleRatio() const
+    {
+        return m_squircleRatio;
+    }
 
 private:
     static bool isManagedWindow(EffectWindow *w);

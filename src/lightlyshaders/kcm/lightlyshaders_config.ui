@@ -127,7 +127,7 @@
           <bool>true</bool>
          </property>
       </widget>
-     </item> 
+     </item>
 
      <item row="4" column="7">
       <widget class="KColorButton" name="kcfg_OuterOutlineColor">
@@ -174,7 +174,7 @@
           <bool>false</bool>
          </property>
       </widget>
-     </item> 
+     </item>
      <item>
       <widget class="QComboBox" name="kcfg_CornersType">
          <item>
@@ -186,16 +186,16 @@
           <property name="text">
            <string>Squircled</string>
           </property>
-         </item>        
+         </item>
       </widget>
-     </item> 
+     </item>
      <item>
       <widget class="QLabel" name="squircleRatioLabel">
        <property name="text">
         <string>Squircle ratio</string>
        </property>
       </widget>
-     </item> 
+     </item>
      <item>
       <widget class="QSlider" name="kcfg_SquircleRatio">
        <property name="minimum">
@@ -220,7 +220,7 @@
         <number>1</number>
        </property>
       </widget>
-     </item>    
+     </item>
      <item>
       <spacer name="verticalSpacer">
        <property name="orientation">

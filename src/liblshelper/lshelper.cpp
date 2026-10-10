@@ -9,15 +9,15 @@
 
 #include <algorithm>
 
-namespace KWin {
+namespace KWin
+{
 
 static bool isMaximized(EffectWindow *w)
 {
     return w->window()->maximizeMode() == MaximizeFull;
 }
 
-void
-LSHelper::reconfigure()
+void LSHelper::reconfigure()
 {
     LightlyShadersConfig::self()->load();
 
@@ -27,7 +27,7 @@ LSHelper::reconfigure()
     m_size = LightlyShadersConfig::roundness();
     m_disabledForMaximized = LightlyShadersConfig::disabledForMaximized();
 
-    if(m_cornersType == SquircledCorners) {
+    if (m_cornersType == SquircledCorners) {
         m_size = static_cast<int>(m_size * 0.5 * m_squircleRatio);
     }
 
@@ -35,14 +35,12 @@ LSHelper::reconfigure()
     m_shadowOffset = std::clamp(m_shadowOffset, 0, std::max(m_size - 1, 0));
 }
 
-bool
-LSHelper::hasShadow(EffectWindow *w)
+bool LSHelper::hasShadow(EffectWindow *w)
 {
     return w->expandedGeometry().size() != w->frameGeometry().size();
 }
 
-bool
-LSHelper::isManagedWindow(EffectWindow *w)
+bool LSHelper::isManagedWindow(EffectWindow *w)
 {
     // Shells, docks and launchers that draw their own shape, matched by window class
     // when they don't have a server side decoration
@@ -61,19 +59,8 @@ LSHelper::isManagedWindow(EffectWindow *w)
         QStringLiteral("ksmserver"),
     };
 
-    if (w->isDesktop()
-            || w->isPopupMenu()
-            || w->isTooltip()
-            || w->isSpecialWindow()
-            || w->isDropdownMenu()
-            || w->isPopupWindow()
-            || w->isLockScreen()
-            || w->isSplash()
-            || w->isOnScreenDisplay()
-            || w->isUtility()
-            || w->isDock()
-            || w->isToolbar()
-            || w->isMenu())
+    if (w->isDesktop() || w->isPopupMenu() || w->isTooltip() || w->isSpecialWindow() || w->isDropdownMenu() || w->isPopupWindow() || w->isLockScreen()
+        || w->isSplash() || w->isOnScreenDisplay() || w->isUtility() || w->isDock() || w->isToolbar() || w->isMenu())
         return false;
 
     const QString windowClass = w->windowClass();
@@ -104,32 +91,26 @@ LSHelper::isManagedWindow(EffectWindow *w)
     return true;
 }
 
-void
-LSHelper::windowAdded(EffectWindow *w)
+void LSHelper::windowAdded(EffectWindow *w)
 {
-    if(isManagedWindow(w)) {
+    if (isManagedWindow(w)) {
         m_managed.insert(w);
     }
 }
 
-void
-LSHelper::windowDeleted(EffectWindow *w)
+void LSHelper::windowDeleted(EffectWindow *w)
 {
     m_managed.remove(w);
 }
 
-bool
-LSHelper::isManaged(EffectWindow *w) const
+bool LSHelper::isManaged(EffectWindow *w) const
 {
     return m_managed.contains(w);
 }
 
-bool
-LSHelper::shouldRound(EffectWindow *w) const
+bool LSHelper::shouldRound(EffectWindow *w) const
 {
-    return isManaged(w)
-        && !w->isFullScreen()
-        && !(m_disabledForMaximized && isMaximized(w));
+    return isManaged(w) && !w->isFullScreen() && !(m_disabledForMaximized && isMaximized(w));
 }
 
 } // namespace KWin

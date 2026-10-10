@@ -24,7 +24,7 @@ out vec4 fragColor;
 #include "colormanagement.glsl"
 #include "saturation.glsl"
 
-//Used code from https://github.com/yilozt/rounded-window-corners project
+// Used code from https://github.com/yilozt/rounded-window-corners project
 float squircleBounds(vec2 p, vec2 center, float clip_radius)
 {
     vec2 delta = abs(p - center);
@@ -38,7 +38,7 @@ float squircleBounds(vec2 p, vec2 center, float clip_radius)
     return clamp(clip_radius - dist + 0.5, 0.0, 1.0);
 }
 
-//Used code from https://github.com/yilozt/rounded-window-corners project
+// Used code from https://github.com/yilozt/rounded-window-corners project
 float circleBounds(vec2 p, vec2 center, float clip_radius)
 {
     vec2 delta = p - center;
@@ -47,11 +47,11 @@ float circleBounds(vec2 p, vec2 center, float clip_radius)
     // The radius gets negative when outlines are wider than the corner, check the
     // signs before squaring so such a circle covers nothing instead of everything
     float outer_radius = clip_radius + 0.5;
-    if(outer_radius <= 0.0 || dist_squared >= (outer_radius * outer_radius))
+    if (outer_radius <= 0.0 || dist_squared >= (outer_radius * outer_radius))
         return 0.0;
 
     float inner_radius = clip_radius - 0.5;
-    if(inner_radius > 0.0 && dist_squared <= (inner_radius * inner_radius))
+    if (inner_radius > 0.0 && dist_squared <= (inner_radius * inner_radius))
         return 1.0;
 
     return outer_radius - sqrt(dist_squared);
@@ -59,7 +59,7 @@ float circleBounds(vec2 p, vec2 center, float clip_radius)
 
 float cornerBounds(vec2 p, vec2 center, float clip_radius)
 {
-    if(is_squircle) {
+    if (is_squircle) {
         return squircleBounds(p, center, clip_radius);
     }
     return circleBounds(p, center, clip_radius);

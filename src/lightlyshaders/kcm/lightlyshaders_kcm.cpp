@@ -1,6 +1,6 @@
 #include "lightlyshaders_kcm.h"
-#include "lightlyshaders_config.h"
 #include "kwineffects_interface.h"
+#include "lightlyshaders_config.h"
 
 #include <KPluginFactory>
 
@@ -19,20 +19,16 @@ LightlyShadersKCM::LightlyShadersKCM(QObject *parent, const KPluginMetaData &dat
     updateSquircleRatioEnabled();
 }
 
-void
-LightlyShadersKCM::save()
+void LightlyShadersKCM::save()
 {
     KCModule::save();
 
-    OrgKdeKwinEffectsInterface interface(QStringLiteral("org.kde.KWin"),
-                                         QStringLiteral("/Effects"),
-                                         QDBusConnection::sessionBus());
+    OrgKdeKwinEffectsInterface interface(QStringLiteral("org.kde.KWin"), QStringLiteral("/Effects"), QDBusConnection::sessionBus());
     interface.reconfigureEffect(QStringLiteral("kwin_effect_lightlyshaders"));
     interface.reconfigureEffect(QStringLiteral("lightlyshaders_blur"));
 }
 
-void
-LightlyShadersKCM::updateSquircleRatioEnabled()
+void LightlyShadersKCM::updateSquircleRatioEnabled()
 {
     const bool squircle = ui.kcfg_CornersType->currentIndex() == LightlyShadersConfig::EnumCornersType::SquircledCorners;
     ui.squircleRatioLabel->setEnabled(squircle);

@@ -29,17 +29,18 @@
 
 Q_LOGGING_CATEGORY(LIGHTLYSHADERS, "kwin_effect_lightlyshaders", QtWarningMsg)
 
-namespace KWin {
+namespace KWin
+{
 
-KWIN_EFFECT_FACTORY_SUPPORTED(LightlyShadersEffect,
-                              "lightlyshaders.json",
-                              return LightlyShadersEffect::supported();)
+KWIN_EFFECT_FACTORY_SUPPORTED(LightlyShadersEffect, "lightlyshaders.json", return LightlyShadersEffect::supported();)
 
 LightlyShadersEffect::LightlyShadersEffect()
 {
     reconfigure(ReconfigureAll);
 
-    m_shader = ShaderManager::instance()->generateShaderFromFile(ShaderTrait::MapTexture, QString(), QStringLiteral(":/effects/lightlyshaders/shaders/lightlyshaders.frag"));
+    m_shader = ShaderManager::instance()->generateShaderFromFile(ShaderTrait::MapTexture,
+                                                                 QString(),
+                                                                 QStringLiteral(":/effects/lightlyshaders/shaders/lightlyshaders.frag"));
     if (!m_shader) {
         qCWarning(LIGHTLYSHADERS) << "Failed to load shader, LightlyShaders will not work";
         return;
@@ -72,8 +73,7 @@ LightlyShadersEffect::LightlyShadersEffect()
 
 LightlyShadersEffect::~LightlyShadersEffect() = default;
 
-void
-LightlyShadersEffect::windowAdded(EffectWindow *w)
+void LightlyShadersEffect::windowAdded(EffectWindow *w)
 {
     m_helper.windowAdded(w);
     if (!m_helper.isManaged(w)) {
@@ -85,8 +85,7 @@ LightlyShadersEffect::windowAdded(EffectWindow *w)
     updateRedirect(w);
 }
 
-void
-LightlyShadersEffect::windowDeleted(EffectWindow *w)
+void LightlyShadersEffect::windowDeleted(EffectWindow *w)
 {
     // OffscreenEffect unredirects deleted windows by itself
     m_redirected.remove(w);
@@ -95,8 +94,7 @@ LightlyShadersEffect::windowDeleted(EffectWindow *w)
 
 // Only keep a window offscreen while its corners are actually drawn, so fullscreen
 // windows (and maximized ones, if disabled for them) render directly again
-void
-LightlyShadersEffect::updateRedirect(EffectWindow *w)
+void LightlyShadersEffect::updateRedirect(EffectWindow *w)
 {
     const bool shouldRedirect = m_shader && m_helper.shouldRound(w);
     if (shouldRedirect == m_redirected.contains(w)) {
@@ -113,8 +111,7 @@ LightlyShadersEffect::updateRedirect(EffectWindow *w)
     }
 }
 
-void
-LightlyShadersEffect::reconfigure(ReconfigureFlags flags)
+void LightlyShadersEffect::reconfigure(ReconfigureFlags flags)
 {
     Q_UNUSED(flags)
 
@@ -138,8 +135,7 @@ LightlyShadersEffect::reconfigure(ReconfigureFlags flags)
     effects->addRepaintFull();
 }
 
-void
-LightlyShadersEffect::prePaintWindow(RenderView *view, EffectWindow *w, WindowPrePaintData &data)
+void LightlyShadersEffect::prePaintWindow(RenderView *view, EffectWindow *w, WindowPrePaintData &data)
 {
     // The rounded corners are see-through, so the window must not occlude what is below it.
     // KWin no longer lets effects carve parts out of the opaque region, it's all or nothing.
@@ -150,8 +146,12 @@ LightlyShadersEffect::prePaintWindow(RenderView *view, EffectWindow *w, WindowPr
     effects->prePaintWindow(view, w, data);
 }
 
-void
-LightlyShadersEffect::drawWindow(const RenderTarget &renderTarget, const RenderViewport &viewport, EffectWindow *w, int mask, const Region &deviceRegion, WindowPaintData &data)
+void LightlyShadersEffect::drawWindow(const RenderTarget &renderTarget,
+                                      const RenderViewport &viewport,
+                                      EffectWindow *w,
+                                      int mask,
+                                      const Region &deviceRegion,
+                                      WindowPaintData &data)
 {
     const bool visible = viewport.renderRect().intersects(w->expandedGeometry()) || (mask & PAINT_WINDOW_TRANSFORMED);
     if (!m_redirected.contains(w) || !visible) {
@@ -187,8 +187,7 @@ LightlyShadersEffect::drawWindow(const RenderTarget &renderTarget, const RenderV
     sm->popShader();
 }
 
-bool
-LightlyShadersEffect::supported()
+bool LightlyShadersEffect::supported()
 {
     return effects->isOpenGLCompositing();
 }
