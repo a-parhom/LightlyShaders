@@ -24,7 +24,7 @@ public:
 
     // Whether the window gets rounded corners at all, decided once when it's added
     bool isManaged(EffectWindow *w) const;
-    // Whether the corners should be drawn right now (not fullscreen, not skipped while maximized)
+    // Whether the corners should be drawn right now (not fullscreen, not skipped while maximized or tiled)
     bool shouldRound(EffectWindow *w) const;
     // Whether the window is big enough to have rounded corners. Tiny helper windows
     // would otherwise be drawn as a small circle or outline.
@@ -56,6 +56,7 @@ private:
     int m_squircleRatio = 0;
     int m_shadowOffset = 0;
     bool m_disabledForMaximized = false;
+    bool m_disabledForTiled = false;
 
     QSet<EffectWindow *> m_managed;
 };

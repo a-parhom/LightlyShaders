@@ -38,6 +38,9 @@
         <entry name="DisabledForMaximized" type="Bool">
             <default>false</default>
         </entry>
+        <entry name="DisabledForTiled" type="Bool">
+            <default>false</default>
+        </entry>
         <entry name="CornersType" type="Enum">
             <choices>
                 <choice name="RoundedCorners" />

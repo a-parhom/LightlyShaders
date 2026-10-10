@@ -176,6 +176,13 @@
       </widget>
      </item>
      <item>
+      <widget class="QCheckBox" name="kcfg_DisabledForTiled">
+       <property name="text">
+        <string>Disable for tiled windows</string>
+       </property>
+      </widget>
+     </item>
+     <item>
       <widget class="QComboBox" name="kcfg_CornersType">
          <item>
           <property name="text">

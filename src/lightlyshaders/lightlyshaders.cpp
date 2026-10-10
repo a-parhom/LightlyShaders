@@ -24,6 +24,7 @@
 #include <effect/effecthandler.h>
 #include <opengl/glshader.h>
 #include <opengl/glshadermanager.h>
+#include <window.h>
 
 #include <QVector2D>
 
@@ -82,6 +83,9 @@ void LightlyShadersEffect::windowAdded(EffectWindow *w)
 
     connect(w, &EffectWindow::windowFullScreenChanged, this, &LightlyShadersEffect::updateRedirect);
     connect(w, &EffectWindow::windowMaximizedStateChanged, this, &LightlyShadersEffect::updateRedirect);
+    connect(w->window(), &Window::tileChanged, this, [this, w]() {
+        updateRedirect(w);
+    });
     updateRedirect(w);
 }
 
@@ -93,7 +97,7 @@ void LightlyShadersEffect::windowDeleted(EffectWindow *w)
 }
 
 // Only keep a window offscreen while its corners are actually drawn, so fullscreen
-// windows (and maximized ones, if disabled for them) render directly again
+// windows (and maximized or tiled ones, if disabled for them) render directly again
 void LightlyShadersEffect::updateRedirect(EffectWindow *w)
 {
     const bool shouldRedirect = m_shader && m_helper.shouldRound(w);
@@ -124,7 +128,7 @@ void LightlyShadersEffect::reconfigure(ReconfigureFlags flags)
     m_innerOutlineColor = LightlyShadersConfig::innerOutlineColor();
     m_outerOutlineColor = LightlyShadersConfig::outerOutlineColor();
 
-    // "Disabled for maximized" may have changed
+    // The maximized and tiled options may have changed
     const auto stackingOrder = effects->stackingOrder();
     for (EffectWindow *window : stackingOrder) {
         if (m_helper.isManaged(window)) {

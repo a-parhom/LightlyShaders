@@ -17,6 +17,11 @@ static bool isMaximized(EffectWindow *w)
     return w->window()->maximizeMode() == MaximizeFull;
 }
 
+static bool isTiled(EffectWindow *w)
+{
+    return w->window()->tile() != nullptr;
+}
+
 void LSHelper::reconfigure()
 {
     LightlyShadersConfig::self()->load();
@@ -26,6 +31,7 @@ void LSHelper::reconfigure()
     m_shadowOffset = LightlyShadersConfig::shadowOffset();
     m_size = LightlyShadersConfig::roundness();
     m_disabledForMaximized = LightlyShadersConfig::disabledForMaximized();
+    m_disabledForTiled = LightlyShadersConfig::disabledForTiled();
 
     if (m_cornersType == SquircledCorners) {
         m_size = static_cast<int>(m_size * 0.5 * m_squircleRatio);
@@ -110,7 +116,7 @@ bool LSHelper::isManaged(EffectWindow *w) const
 
 bool LSHelper::shouldRound(EffectWindow *w) const
 {
-    return isManaged(w) && !w->isFullScreen() && !(m_disabledForMaximized && isMaximized(w));
+    return isManaged(w) && !w->isFullScreen() && !(m_disabledForMaximized && isMaximized(w)) && !(m_disabledForTiled && isTiled(w));
 }
 
 bool LSHelper::cornersFit(EffectWindow *w) const
