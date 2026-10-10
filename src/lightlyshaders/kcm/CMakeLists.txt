@@ -12,7 +12,6 @@ target_link_libraries(kwin_lightlyshaders_config
     KWin::kwin
     Qt6::Widgets
     Qt6::Core
-    Qt6::CorePrivate
     Qt6::DBus
     Qt6::Gui
     KF6::ConfigCore

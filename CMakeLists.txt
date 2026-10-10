@@ -62,7 +62,7 @@ find_package(epoxy REQUIRED)
 find_package(X11 REQUIRED)
 find_package(XCB REQUIRED COMPONENTS XCB)
 
-find_package(KWin REQUIRED COMPONENTS
+find_package(KWin 6.7 REQUIRED COMPONENTS
     kwineffects
 )
 

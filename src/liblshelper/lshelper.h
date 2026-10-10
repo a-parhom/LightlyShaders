@@ -1,5 +1,6 @@
 #include "liblshelper_export.h"
 
+#include <core/region.h>
 #include <effect/effecthandler.h>
 #include <QRegion>
 #include <QImage>
@@ -22,7 +23,7 @@ class LIBLSHELPER_EXPORT LSHelper: public QObject
 		void reconfigure();
 		QPainterPath superellipse(float size, int n, int translate);
     	QImage genMaskImg(int size, bool mask, bool outer_rect);
-		void roundBlurRegion(EffectWindow *w, QRegion *region);
+		void roundBlurRegion(EffectWindow *w, RegionF *region);
 		bool isManagedWindow(EffectWindow *w);
 		void blurWindowAdded(EffectWindow *w);
 		void blurWindowDeleted(EffectWindow *w);
@@ -31,12 +32,12 @@ class LIBLSHELPER_EXPORT LSHelper: public QObject
 		enum { RoundedCorners = 0, SquircledCorners };
 		enum { TopLeft = 0, TopRight, BottomRight, BottomLeft, NTex };
 
-		QRegion* m_maskRegions[NTex];
+		QRegion m_maskRegions[NTex];
 
 	private:
 		bool hasShadow(EffectWindow *w);
 		void setMaskRegions();
-		QRegion* createMaskRegion(QImage img, int size, int corner);
+		QRegion createMaskRegion(QImage img, int size, int corner);
 
 		int m_size, m_cornersType, m_squircleRatio, m_shadowOffset;
 		bool m_disabledForMaximized;

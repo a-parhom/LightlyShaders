@@ -55,7 +55,7 @@ LightlyShadersEffect::LightlyShadersEffect() : OffscreenEffect()
 {
     ensureResources();
 
-    m_helper = new LSHelper();
+    m_helper = std::make_unique<LSHelper>();
     reconfigure(ReconfigureAll);
 
     m_shader = std::unique_ptr<GLShader>(ShaderManager::instance()->generateShaderFromFile(ShaderTrait::MapTexture, QStringLiteral(""), QStringLiteral(":/effects/lightlyshaders/shaders/lightlyshaders.frag")));
@@ -65,20 +65,16 @@ LightlyShadersEffect::LightlyShadersEffect() : OffscreenEffect()
         return;
     }
 
-    if (m_shader->isValid())
-    {
-        const auto stackingOrder = effects->stackingOrder();
-        for (EffectWindow *window : stackingOrder) {
-            windowAdded(window);
-        }
-
-        connect(effects, &EffectsHandler::windowAdded, this, &LightlyShadersEffect::windowAdded);
-        connect(effects, &EffectsHandler::windowDeleted, this, &LightlyShadersEffect::windowDeleted);
-
-        qCWarning(LIGHTLYSHADERS) << "LightlyShaders loaded.";
+    const auto stackingOrder = effects->stackingOrder();
+    for (EffectWindow *window : stackingOrder) {
+        windowAdded(window);
     }
-    else
-        qCWarning(LIGHTLYSHADERS) << "LightlyShaders: no valid shaders found! LightlyShaders will not work.";
+
+    connect(effects, &EffectsHandler::windowAdded, this, &LightlyShadersEffect::windowAdded);
+    connect(effects, &EffectsHandler::windowDeleted, this, &LightlyShadersEffect::windowDeleted);
+    connect(effects, &EffectsHandler::screenRemoved, this, &LightlyShadersEffect::screenRemoved);
+
+    qCWarning(LIGHTLYSHADERS) << "LightlyShaders loaded.";
 }
 
 LightlyShadersEffect::~LightlyShadersEffect()
@@ -90,6 +86,12 @@ void
 LightlyShadersEffect::windowDeleted(EffectWindow *w)
 {
     m_windows.remove(w);
+}
+
+void
+LightlyShadersEffect::screenRemoved(LogicalOutput *s)
+{
+    m_screens.erase(s);
 }
 
 void
@@ -139,7 +141,7 @@ LightlyShadersEffect::windowMaximizedStateChanged(EffectWindow *w, bool horizont
 }
 
 void
-LightlyShadersEffect::setRoundness(const int r, Output *s)
+LightlyShadersEffect::setRoundness(const int r, LogicalOutput *s)
 {
     m_size = r;
     m_screens[s].sizeScaled = float(r)*m_screens[s].scale;
@@ -179,7 +181,7 @@ LightlyShadersEffect::reconfigure(ReconfigureFlags flags)
     }
 
     const auto screens = effects->screens();
-    for(Output *s : screens)
+    for(LogicalOutput *s : screens)
     {
         if (effects->waylandDisplay() == nullptr) {
             s = nullptr;
@@ -195,7 +197,7 @@ LightlyShadersEffect::reconfigure(ReconfigureFlags flags)
 }
 
 void
-LightlyShadersEffect::paintScreen(const RenderTarget &renderTarget, const RenderViewport &viewport, int mask, const QRegion &region, Output *s)
+LightlyShadersEffect::paintScreen(const RenderTarget &renderTarget, const RenderViewport &viewport, int mask, const Region &deviceRegion, LogicalOutput *s)
 {
     bool set_roundness = false;
 
@@ -216,54 +218,25 @@ LightlyShadersEffect::paintScreen(const RenderTarget &renderTarget, const Render
         m_helper->reconfigure();
     }
 
-    effects->paintScreen(renderTarget, viewport, mask, region, s);
+    effects->paintScreen(renderTarget, viewport, mask, deviceRegion, s);
 }
 
 void
-LightlyShadersEffect::prePaintWindow(EffectWindow *w, WindowPrePaintData &data, std::chrono::milliseconds time)
+LightlyShadersEffect::prePaintWindow(RenderView *view, EffectWindow *w, WindowPrePaintData &data)
 {
-    if (!isValidWindow(w) )
-    {
-        effects->prePaintWindow(w, data, time);
-        return;
+    // The rounded corners are see-through, so the window must not occlude what is below it.
+    // KWin no longer lets effects carve parts out of the opaque region, it's all or nothing.
+    if (isValidWindow(w)) {
+        data.setTranslucent();
     }
 
-    Output *s = w->screen();
-    if (effects->waylandDisplay() == nullptr) {
-        s = nullptr;
-    }
-
-    const QRectF geo(w->frameGeometry());
-    for (int corner = 0; corner < LSHelper::NTex; ++corner)
-    {
-        QRegion reg = QRegion(scale(m_helper->m_maskRegions[corner]->boundingRect(), m_screens[s].scale).toRect());
-        switch(corner) {
-            case LSHelper::TopLeft:
-                reg.translate(geo.x()-m_shadowOffset, geo.y()-m_shadowOffset);
-                break;
-            case LSHelper::TopRight:
-                reg.translate(geo.x() + geo.width() - m_size, geo.y()-m_shadowOffset);
-                break;
-            case LSHelper::BottomRight:
-                reg.translate(geo.x() + geo.width() - m_size-1, geo.y()+geo.height()-m_size-1);
-                break;
-            case LSHelper::BottomLeft:
-                reg.translate(geo.x()-m_shadowOffset+1, geo.y()+geo.height()-m_size-1);
-                break;
-            default:
-                break;
-        }
-
-        data.opaque -= reg;
-    }
-
-    effects->prePaintWindow(w, data, time);
+    effects->prePaintWindow(view, w, data);
 }
 
 bool
 LightlyShadersEffect::isValidWindow(EffectWindow *w)
 {
-    if (!m_shader->isValid()
+    if (!m_shader
             || !m_windows[w].isManaged
             || m_windows[w].skipEffect
         )
@@ -274,17 +247,17 @@ LightlyShadersEffect::isValidWindow(EffectWindow *w)
 }
 
 void
-LightlyShadersEffect::drawWindow(const RenderTarget &renderTarget, const RenderViewport &viewport, EffectWindow *w, int mask, const QRegion &region, WindowPaintData &data)
+LightlyShadersEffect::drawWindow(const RenderTarget &renderTarget, const RenderViewport &viewport, EffectWindow *w, int mask, const Region &deviceRegion, WindowPaintData &data)
 {    
-    QRectF screen = viewport.renderRect().toRect();
+    const RectF screen = viewport.renderRect();
 
     if (!isValidWindow(w) || (!screen.intersects(w->frameGeometry()) && !(mask & PAINT_WINDOW_TRANSFORMED)) )
     {
-        effects->drawWindow(renderTarget, viewport, w, mask, region, data);
+        effects->drawWindow(renderTarget, viewport, w, mask, deviceRegion, data);
         return;
     }
 
-    Output *s = w->screen();
+    LogicalOutput *s = w->screen();
     if (effects->waylandDisplay() == nullptr) {
         s = nullptr;
     }
@@ -330,7 +303,7 @@ LightlyShadersEffect::drawWindow(const RenderTarget &renderTarget, const RenderV
 
     glActiveTexture(GL_TEXTURE0);
 
-    OffscreenEffect::drawWindow(renderTarget, viewport, w, mask, region, data);
+    OffscreenEffect::drawWindow(renderTarget, viewport, w, mask, deviceRegion, data);
 
     sm->popShader();
 }

@@ -12,21 +12,10 @@ namespace KWin {
 
 LSHelper::LSHelper() : QObject()
 {
-    for (int i = 0; i < NTex; ++i)
-    {
-        m_maskRegions[i] = 0;
-    }
 }
 
 LSHelper::~LSHelper()
 {
-    //delete mask regions
-    for (int i = 0; i < NTex; ++i)
-    {
-        if (m_maskRegions[i])
-            delete m_maskRegions[i];
-    }
-
     m_managed.clear();
 }
 
@@ -66,7 +55,7 @@ LSHelper::setMaskRegions()
     m_maskRegions[BottomLeft] = createMaskRegion(img, size, BottomLeft);
 }
 
-QRegion *
+QRegion
 LSHelper::createMaskRegion(QImage img, int size, int corner)
 {
     QImage img_copy;
@@ -89,11 +78,11 @@ LSHelper::createMaskRegion(QImage img, int size, int corner)
     img_copy = img_copy.createMaskFromColor(QColor(Qt::black).rgb(), Qt::MaskOutColor);
     QBitmap bitmap = QBitmap::fromImage(img_copy, Qt::DiffuseAlphaDither);
 
-    return new QRegion(bitmap);
+    return QRegion(bitmap);
 }
 
 void 
-LSHelper::roundBlurRegion(EffectWindow *w, QRegion *blur_region)
+LSHelper::roundBlurRegion(EffectWindow *w, RegionF *blur_region)
 {
     if(blur_region->isEmpty()) {
         return;
@@ -110,21 +99,21 @@ LSHelper::roundBlurRegion(EffectWindow *w, QRegion *blur_region)
         return;
     }
 
-	QRegion top_left = *m_maskRegions[TopLeft];
-    top_left.translate(0-m_shadowOffset+1, 0-m_shadowOffset+1);  
-    *blur_region = blur_region->subtracted(top_left);  
-    
-    QRegion top_right = *m_maskRegions[TopRight];
-    top_right.translate(geo.width() - m_size-1, 0-m_shadowOffset+1);   
-    *blur_region = blur_region->subtracted(top_right);  
+    QRegion top_left = m_maskRegions[TopLeft];
+    top_left.translate(0-m_shadowOffset+1, 0-m_shadowOffset+1);
+    *blur_region = blur_region->subtracted(RegionF(top_left));
 
-    QRegion bottom_right = *m_maskRegions[BottomRight];
-    bottom_right.translate(geo.width() - m_size-1, geo.height()-m_size-1);    
-    *blur_region = blur_region->subtracted(bottom_right);     
-    
-    QRegion bottom_left = *m_maskRegions[BottomLeft];
+    QRegion top_right = m_maskRegions[TopRight];
+    top_right.translate(geo.width() - m_size-1, 0-m_shadowOffset+1);
+    *blur_region = blur_region->subtracted(RegionF(top_right));
+
+    QRegion bottom_right = m_maskRegions[BottomRight];
+    bottom_right.translate(geo.width() - m_size-1, geo.height()-m_size-1);
+    *blur_region = blur_region->subtracted(RegionF(bottom_right));
+
+    QRegion bottom_left = m_maskRegions[BottomLeft];
     bottom_left.translate(0-m_shadowOffset+1, geo.height()-m_size-1);
-    *blur_region = blur_region->subtracted(bottom_left);
+    *blur_region = blur_region->subtracted(RegionF(bottom_left));
 }
 
 QPainterPath
