@@ -7,6 +7,8 @@
     <group name="General">
         <entry name="Roundness" type="Int">
             <default>5</default>
+            <min>3</min>
+            <max>64</max>
         </entry>
 
         <entry name="InnerOutline" type="Bool">
@@ -17,6 +19,8 @@
         </entry>
         <entry name="InnerOutlineWidth" type = "Int">
             <default>1</default>
+            <min>1</min>
+            <max>10</max>
         </entry>
 
         <entry name="OuterOutline" type = "Bool">
@@ -27,6 +31,8 @@
         </entry>
         <entry name="OuterOutlineWidth" type = "Int">
             <default>1</default>
+            <min>1</min>
+            <max>10</max>
         </entry>
 
         <entry name="DisabledForMaximized" type = "Bool">
@@ -41,9 +47,13 @@
         </entry>
         <entry name="SquircleRatio" type = "Int">
             <default>5</default>
+            <min>2</min>
+            <max>12</max>
         </entry>
         <entry name="ShadowOffset" type = "Int">
             <default>2</default>
+            <min>2</min>
+            <max>6</max>
         </entry>
     </group>
 </kcfg>
