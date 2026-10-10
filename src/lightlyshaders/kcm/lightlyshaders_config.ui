@@ -166,6 +166,46 @@
      </item>
 
      <item>
+      <widget class="QCheckBox" name="kcfg_InactiveOutlines">
+       <property name="text">
+        <string>Different outline colors for inactive windows</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="inactiveOutlinesLayout">
+       <item>
+        <widget class="QLabel" name="inactiveInnerOutlineLabel">
+         <property name="text">
+          <string>Inactive inner outline:</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="KColorButton" name="kcfg_InactiveInnerOutlineColor">
+         <property name="alphaChannelEnabled">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="inactiveOuterOutlineLabel">
+         <property name="text">
+          <string>Inactive outer outline:</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="KColorButton" name="kcfg_InactiveOuterOutlineColor">
+         <property name="alphaChannelEnabled">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+
+     <item>
       <widget class="QCheckBox" name="kcfg_DisabledForMaximized">
        <property name="text">
         <string>Disable for maximized windows</string>

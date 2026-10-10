@@ -17,6 +17,7 @@ public:
 
 private:
     void updateSquircleRatioEnabled();
+    void updateInactiveOutlinesEnabled();
 
     Ui::LightlyShadersKCM ui;
 };

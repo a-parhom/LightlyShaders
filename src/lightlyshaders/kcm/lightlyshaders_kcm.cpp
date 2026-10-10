@@ -17,6 +17,9 @@ LightlyShadersKCM::LightlyShadersKCM(QObject *parent, const KPluginMetaData &dat
 
     connect(ui.kcfg_CornersType, &QComboBox::currentIndexChanged, this, &LightlyShadersKCM::updateSquircleRatioEnabled);
     updateSquircleRatioEnabled();
+
+    connect(ui.kcfg_InactiveOutlines, &QCheckBox::toggled, this, &LightlyShadersKCM::updateInactiveOutlinesEnabled);
+    updateInactiveOutlinesEnabled();
 }
 
 void LightlyShadersKCM::save()
@@ -33,6 +36,15 @@ void LightlyShadersKCM::updateSquircleRatioEnabled()
     const bool squircle = ui.kcfg_CornersType->currentIndex() == LightlyShadersConfig::EnumCornersType::SquircledCorners;
     ui.squircleRatioLabel->setEnabled(squircle);
     ui.kcfg_SquircleRatio->setEnabled(squircle);
+}
+
+void LightlyShadersKCM::updateInactiveOutlinesEnabled()
+{
+    const bool enabled = ui.kcfg_InactiveOutlines->isChecked();
+    ui.inactiveInnerOutlineLabel->setEnabled(enabled);
+    ui.kcfg_InactiveInnerOutlineColor->setEnabled(enabled);
+    ui.inactiveOuterOutlineLabel->setEnabled(enabled);
+    ui.kcfg_InactiveOuterOutlineColor->setEnabled(enabled);
 }
 
 } // namespace KWin

@@ -70,6 +70,8 @@ LightlyShadersEffect::LightlyShadersEffect()
 
     connect(effects, &EffectsHandler::windowAdded, this, &LightlyShadersEffect::windowAdded);
     connect(effects, &EffectsHandler::windowDeleted, this, &LightlyShadersEffect::windowDeleted);
+    connect(effects, &EffectsHandler::windowActivated, this, &LightlyShadersEffect::windowActivated);
+    m_activeWindow = effects->activeWindow();
 }
 
 LightlyShadersEffect::~LightlyShadersEffect() = default;
@@ -125,6 +127,9 @@ void LightlyShadersEffect::reconfigure(ReconfigureFlags flags)
     m_outerOutlineWidth = m_outerOutline ? LightlyShadersConfig::outerOutlineWidth() : 0;
     m_innerOutlineColor = LightlyShadersConfig::innerOutlineColor();
     m_outerOutlineColor = LightlyShadersConfig::outerOutlineColor();
+    m_inactiveOutlines = LightlyShadersConfig::inactiveOutlines();
+    m_inactiveInnerOutlineColor = LightlyShadersConfig::inactiveInnerOutlineColor();
+    m_inactiveOuterOutlineColor = LightlyShadersConfig::inactiveOuterOutlineColor();
 
     // Which windows are managed and the maximized and tiled options may have changed
     const auto stackingOrder = effects->stackingOrder();
@@ -173,8 +178,9 @@ void LightlyShadersEffect::drawWindow(const RenderTarget &renderTarget,
     m_shader->setUniform(m_uniforms.shadowOrigin, QVector2D(geo.left() - expGeo.left(), expGeo.bottom() - geo.bottom()));
     m_shader->setUniform(m_uniforms.radius, float(m_helper.roundness() * scale));
     m_shader->setUniform(m_uniforms.shadowOffset, float(m_helper.shadowOffset() * scale));
-    m_shader->setUniform(m_uniforms.innerOutlineColor, m_innerOutlineColor);
-    m_shader->setUniform(m_uniforms.outerOutlineColor, m_outerOutlineColor);
+    const bool inactive = m_inactiveOutlines && w != effects->activeWindow();
+    m_shader->setUniform(m_uniforms.innerOutlineColor, inactive ? m_inactiveInnerOutlineColor : m_innerOutlineColor);
+    m_shader->setUniform(m_uniforms.outerOutlineColor, inactive ? m_inactiveOuterOutlineColor : m_outerOutlineColor);
     m_shader->setUniform(m_uniforms.innerOutlineWidth, float(m_innerOutlineWidth * scale));
     m_shader->setUniform(m_uniforms.outerOutlineWidth, float(m_outerOutlineWidth * scale));
     m_shader->setUniform(m_uniforms.drawInnerOutline, int(m_innerOutline));
@@ -185,6 +191,20 @@ void LightlyShadersEffect::drawWindow(const RenderTarget &renderTarget,
     OffscreenEffect::drawWindow(renderTarget, viewport, w, mask, deviceRegion, data);
 
     sm->popShader();
+}
+
+void LightlyShadersEffect::windowActivated(EffectWindow *w)
+{
+    // With different inactive outlines both the window losing and the one gaining focus change
+    if (m_inactiveOutlines) {
+        if (m_activeWindow) {
+            m_activeWindow->addRepaintFull();
+        }
+        if (w) {
+            w->addRepaintFull();
+        }
+    }
+    m_activeWindow = w;
 }
 
 bool LightlyShadersEffect::drawsCorners(EffectWindow *w) const

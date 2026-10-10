@@ -35,6 +35,16 @@
             <max>10</max>
         </entry>
 
+        <entry name="InactiveOutlines" type="Bool">
+            <default>false</default>
+        </entry>
+        <entry name="InactiveInnerOutlineColor" type="Color">
+           <default>255, 255, 255, 25</default>
+        </entry>
+        <entry name="InactiveOuterOutlineColor" type="Color">
+           <default>0, 0, 0, 75</default>
+        </entry>
+
         <entry name="DisabledForMaximized" type="Bool">
             <default>false</default>
         </entry>

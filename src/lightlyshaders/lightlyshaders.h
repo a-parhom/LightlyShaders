@@ -24,6 +24,7 @@
 #include "lshelper.h"
 
 #include <QColor>
+#include <QPointer>
 
 namespace KWin
 {
@@ -61,6 +62,7 @@ private:
     void windowAdded(EffectWindow *w);
     void windowDeleted(EffectWindow *w);
     void updateRedirect(EffectWindow *w);
+    void windowActivated(EffectWindow *w);
     bool drawsCorners(EffectWindow *w) const;
 
     LSHelper m_helper;
@@ -73,6 +75,11 @@ private:
     bool m_outerOutline = false;
     QColor m_innerOutlineColor;
     QColor m_outerOutlineColor;
+    bool m_inactiveOutlines = false;
+    QColor m_inactiveInnerOutlineColor;
+    QColor m_inactiveOuterOutlineColor;
+    // Repainted when it loses focus, its outlines change with the inactive colors
+    QPointer<EffectWindow> m_activeWindow;
 
     std::unique_ptr<GLShader> m_shader;
     // Shader uniform locations, -1 is ignored by GLShader::setUniform()
