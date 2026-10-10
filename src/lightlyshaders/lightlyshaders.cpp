@@ -26,8 +26,6 @@
 #include <opengl/glshadermanager.h>
 
 #include <QVector2D>
-#include <QVector3D>
-#include <QVector4D>
 
 Q_LOGGING_CATEGORY(LIGHTLYSHADERS, "kwin_effect_lightlyshaders", QtWarningMsg)
 
@@ -36,16 +34,6 @@ namespace KWin {
 KWIN_EFFECT_FACTORY_SUPPORTED(LightlyShadersEffect,
                               "lightlyshaders.json",
                               return LightlyShadersEffect::supported();)
-
-static QVector4D toVector(const QColor &c)
-{
-    return QVector4D(c.redF(), c.greenF(), c.blueF(), c.alphaF());
-}
-
-static RectF scaled(const RectF &rect, qreal scale)
-{
-    return RectF(rect.x() * scale, rect.y() * scale, rect.width() * scale, rect.height() * scale);
-}
 
 LightlyShadersEffect::LightlyShadersEffect()
 {
@@ -60,7 +48,7 @@ LightlyShadersEffect::LightlyShadersEffect()
     m_uniforms = {
         .frameSize = m_shader->uniformLocation("frame_size"),
         .expandedSize = m_shader->uniformLocation("expanded_size"),
-        .shadowSize = m_shader->uniformLocation("shadow_size"),
+        .shadowOrigin = m_shader->uniformLocation("shadow_origin"),
         .radius = m_shader->uniformLocation("radius"),
         .shadowOffset = m_shader->uniformLocation("shadow_sample_offset"),
         .innerOutlineColor = m_shader->uniformLocation("inner_outline_color"),
@@ -173,19 +161,20 @@ LightlyShadersEffect::drawWindow(const RenderTarget &renderTarget, const RenderV
 
     // Use the scale of the output being painted, a window can span outputs with different scales
     const qreal scale = viewport.scale();
-    const RectF geo = scaled(w->frameGeometry(), scale);
-    const RectF expGeo = scaled(w->expandedGeometry(), scale);
+    const RectF geo = w->frameGeometry().scaled(scale);
+    const RectF expGeo = w->expandedGeometry().scaled(scale);
 
     ShaderManager *sm = ShaderManager::instance();
     sm->pushShader(m_shader.get());
 
     m_shader->setUniform(m_uniforms.frameSize, QVector2D(geo.width(), geo.height()));
     m_shader->setUniform(m_uniforms.expandedSize, QVector2D(expGeo.width(), expGeo.height()));
-    m_shader->setUniform(m_uniforms.shadowSize, QVector3D(geo.x() - expGeo.x(), geo.y() - expGeo.y(), expGeo.height() - geo.height() - geo.y() + expGeo.y()));
+    // Where the frame sits in the texture, which is y-up: the left and bottom shadow size
+    m_shader->setUniform(m_uniforms.shadowOrigin, QVector2D(geo.left() - expGeo.left(), expGeo.bottom() - geo.bottom()));
     m_shader->setUniform(m_uniforms.radius, float(m_helper.roundness() * scale));
     m_shader->setUniform(m_uniforms.shadowOffset, float(m_helper.shadowOffset() * scale));
-    m_shader->setUniform(m_uniforms.innerOutlineColor, toVector(m_innerOutlineColor));
-    m_shader->setUniform(m_uniforms.outerOutlineColor, toVector(m_outerOutlineColor));
+    m_shader->setUniform(m_uniforms.innerOutlineColor, m_innerOutlineColor);
+    m_shader->setUniform(m_uniforms.outerOutlineColor, m_outerOutlineColor);
     m_shader->setUniform(m_uniforms.innerOutlineWidth, float(m_innerOutlineWidth * scale));
     m_shader->setUniform(m_uniforms.outerOutlineWidth, float(m_outerOutlineWidth * scale));
     m_shader->setUniform(m_uniforms.drawInnerOutline, int(m_innerOutline));

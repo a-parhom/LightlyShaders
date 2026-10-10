@@ -30,7 +30,7 @@ LSHelper::reconfigure()
 {
     LightlyShadersConfig::self()->load();
 
-    m_cornersType = LightlyShadersConfig::cornersType();
+    m_cornersType = static_cast<CornersType>(LightlyShadersConfig::cornersType());
     m_squircleRatio = LightlyShadersConfig::squircleRatio();
     m_shadowOffset = LightlyShadersConfig::shadowOffset();
     m_size = LightlyShadersConfig::roundness();
@@ -43,14 +43,14 @@ LSHelper::reconfigure()
     // The shadow sampling offset has to stay inside the corner
     m_shadowOffset = std::clamp(m_shadowOffset, 0, std::max(m_size - 1, 0));
 
-    setMaskRegions();
+    updateCornerMasks();
 }
 
 void
-LSHelper::setMaskRegions()
+LSHelper::updateCornerMasks()
 {
     const int size = m_size + m_shadowOffset;
-    const QImage img = genMaskImg(size);
+    const QImage img = cornerMaskImage(size);
 
     // Indexed by TopLeft, TopRight, BottomRight, BottomLeft: where each corner
     // is in the mask image, and where it goes relative to its window corner
@@ -123,7 +123,7 @@ LSHelper::superellipse(float size, int n, int translate) const
 // Black everywhere except the rounded shape, which is cut out. The black
 // parts of each quarter are what gets removed from the blur region.
 QImage
-LSHelper::genMaskImg(int size) const
+LSHelper::cornerMaskImage(int size) const
 {
     QImage img(size*2, size*2, QImage::Format_ARGB32_Premultiplied);
     img.fill(Qt::transparent);

@@ -30,7 +30,7 @@ public:
 
     int roundness() const { return m_size; }
     int shadowOffset() const { return m_shadowOffset; }
-    int cornersType() const { return m_cornersType; }
+    CornersType cornersType() const { return m_cornersType; }
     int squircleRatio() const { return m_squircleRatio; }
 
 private:
@@ -39,12 +39,12 @@ private:
     static bool isManagedWindow(EffectWindow *w);
     static bool hasShadow(EffectWindow *w);
 
-    void setMaskRegions();
-    QImage genMaskImg(int size) const;
+    void updateCornerMasks();
+    QImage cornerMaskImage(int size) const;
     QPainterPath superellipse(float size, int n, int translate) const;
 
     int m_size = 0;
-    int m_cornersType = RoundedCorners;
+    CornersType m_cornersType = RoundedCorners;
     int m_squircleRatio = 0;
     int m_shadowOffset = 0;
     bool m_disabledForMaximized = false;

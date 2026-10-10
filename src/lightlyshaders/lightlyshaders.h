@@ -60,20 +60,21 @@ private:
     QColor m_outerOutlineColor;
 
     std::unique_ptr<GLShader> m_shader;
+    // Shader uniform locations, -1 is ignored by GLShader::setUniform()
     struct {
-        int frameSize;
-        int expandedSize;
-        int shadowSize;
-        int radius;
-        int shadowOffset;
-        int innerOutlineColor;
-        int outerOutlineColor;
-        int innerOutlineWidth;
-        int outerOutlineWidth;
-        int drawInnerOutline;
-        int drawOuterOutline;
-        int squircleRatio;
-        int isSquircle;
+        int frameSize = -1;
+        int expandedSize = -1;
+        int shadowOrigin = -1;
+        int radius = -1;
+        int shadowOffset = -1;
+        int innerOutlineColor = -1;
+        int outerOutlineColor = -1;
+        int innerOutlineWidth = -1;
+        int outerOutlineWidth = -1;
+        int drawInnerOutline = -1;
+        int drawOuterOutline = -1;
+        int squircleRatio = -1;
+        int isSquircle = -1;
     } m_uniforms;
 };
 
