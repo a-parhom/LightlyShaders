@@ -4,21 +4,12 @@
 #include <effect/effecthandler.h>
 #include <window.h>
 
-#include <QBitmap>
-#include <QPainter>
-#include <QRegion>
 #include <QRegularExpression>
 #include <QStringList>
-#include <QtMath>
 
 #include <algorithm>
 
 namespace KWin {
-
-static int signum(float val)
-{
-    return (0.0f < val) - (val < 0.0f);
-}
 
 static bool isMaximized(EffectWindow *w)
 {
@@ -42,107 +33,6 @@ LSHelper::reconfigure()
 
     // The shadow sampling offset has to stay inside the corner
     m_shadowOffset = std::clamp(m_shadowOffset, 0, std::max(m_size - 1, 0));
-
-    updateCornerMasks();
-}
-
-void
-LSHelper::updateCornerMasks()
-{
-    const int size = m_size + m_shadowOffset;
-    const QImage img = cornerMaskImage(size);
-
-    // Indexed by TopLeft, TopRight, BottomRight, BottomLeft: where each corner
-    // is in the mask image, and where it goes relative to its window corner
-    const QPoint origins[NCorners] = {
-        QPoint(0, 0),
-        QPoint(size, 0),
-        QPoint(size, size),
-        QPoint(0, size),
-    };
-    const QPoint offsets[NCorners] = {
-        QPoint(-m_shadowOffset + 1, -m_shadowOffset + 1),
-        QPoint(-m_size - 1, -m_shadowOffset + 1),
-        QPoint(-m_size - 1, -m_size - 1),
-        QPoint(-m_shadowOffset + 1, -m_size - 1),
-    };
-
-    for (int corner = 0; corner < NCorners; ++corner) {
-        const QImage cornerImg = img.copy(QRect(origins[corner], QSize(size, size)))
-                                     .createMaskFromColor(QColor(Qt::black).rgb(), Qt::MaskOutColor);
-        const QRegion mask(QBitmap::fromImage(cornerImg, Qt::DiffuseAlphaDither));
-        m_cornerMasks[corner] = RegionF(mask.translated(offsets[corner]));
-    }
-}
-
-void
-LSHelper::roundBlurRegion(EffectWindow *w, RegionF *blur_region) const
-{
-    if(blur_region->isEmpty() || !shouldRound(w)) {
-        return;
-    }
-
-    // The blur region is relative to the window's top left corner
-    const int width = static_cast<int>(w->frameGeometry().width());
-    const int height = static_cast<int>(w->frameGeometry().height());
-
-    *blur_region -= m_cornerMasks[TopLeft];
-    *blur_region -= m_cornerMasks[TopRight].translated(width, 0);
-    *blur_region -= m_cornerMasks[BottomRight].translated(width, height);
-    *blur_region -= m_cornerMasks[BottomLeft].translated(0, height);
-}
-
-QPainterPath
-LSHelper::superellipse(float size, int n, int translate) const
-{
-    const float n2 = 2.0 / n;
-    const int steps = 360;
-    const float step = (2 * M_PI) / steps;
-
-    QPainterPath path;
-    path.moveTo(2*size, size);
-
-    for (int i = 1; i < steps; ++i)
-    {
-        const float t = i * step;
-        const float cosT = qCos(t);
-        const float sinT = qSin(t);
-
-        const float x = size + (qPow(qAbs(cosT), n2) * size * signum(cosT));
-        const float y = size - (qPow(qAbs(sinT), n2) * size * signum(sinT));
-
-        path.lineTo(x, y);
-    }
-    path.lineTo(2*size, size);
-
-    path.translate(translate,translate);
-
-    return path;
-}
-
-// Black everywhere except the rounded shape, which is cut out. The black
-// parts of each quarter are what gets removed from the blur region.
-QImage
-LSHelper::cornerMaskImage(int size) const
-{
-    QImage img(size*2, size*2, QImage::Format_ARGB32_Premultiplied);
-    img.fill(Qt::transparent);
-
-    QPainter p(&img);
-    p.fillRect(img.rect(), Qt::black);
-    p.setCompositionMode(QPainter::CompositionMode_DestinationOut);
-    p.setPen(Qt::NoPen);
-    p.setBrush(Qt::black);
-    p.setRenderHint(QPainter::Antialiasing);
-    if (m_cornersType == SquircledCorners) {
-        const QPainterPath squircle = superellipse((size-m_shadowOffset), m_squircleRatio, m_shadowOffset);
-        p.drawPolygon(squircle.toFillPolygon());
-    } else {
-        p.drawEllipse(img.rect().adjusted(m_shadowOffset,m_shadowOffset,-m_shadowOffset,-m_shadowOffset));
-    }
-    p.end();
-
-    return img;
 }
 
 bool

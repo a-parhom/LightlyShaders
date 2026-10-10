@@ -115,6 +115,7 @@ private:
         int boxLocation;
         int cornerRadiusLocation;
         int opacityLocation;
+        int cornerExponentLocation;
     } m_roundedOnscreenPass;
 
     struct

@@ -117,6 +117,7 @@ BlurEffect::BlurEffect()
         m_roundedOnscreenPass.boxLocation = m_roundedOnscreenPass.shader->uniformLocation("box");
         m_roundedOnscreenPass.cornerRadiusLocation = m_roundedOnscreenPass.shader->uniformLocation("cornerRadius");
         m_roundedOnscreenPass.opacityLocation = m_roundedOnscreenPass.shader->uniformLocation("opacity");
+        m_roundedOnscreenPass.cornerExponentLocation = m_roundedOnscreenPass.shader->uniformLocation("cornerExponent");
     }
 
     m_downsamplePass.shader = ShaderManager::instance()->generateShaderFromFile(ShaderTrait::MapTexture,
@@ -464,9 +465,6 @@ RegionF BlurEffect::blurRegion(EffectWindow *w) const
         } else if (frame.has_value()) {
             region = frame.value();
         }
-
-        // Apply LightlyShaders to blur region
-        m_helper.roundBlurRegion(w, &region);
     }
 
     return region;
@@ -793,7 +791,17 @@ void BlurEffect::blur(const RenderTarget &renderTarget, const RenderViewport &vi
 
     const float modulation = opacity * opacity;
 
-    if (const BorderRadius cornerRadius = w->window()->borderRadius(); !cornerRadius.isNull()) {
+    // LightlyShaders: windows it rounds get their blur clipped to the same corner shape
+    BorderRadius cornerRadius = w->window()->borderRadius();
+    float cornerExponent = 2.0;
+    if (m_helper.shouldRound(w)) {
+        cornerRadius = BorderRadius(m_helper.roundness());
+        if (m_helper.cornersType() == LSHelper::SquircledCorners) {
+            cornerExponent = m_helper.squircleRatio();
+        }
+    }
+
+    if (!cornerRadius.isNull()) {
         ShaderManager::instance()->pushShader(m_roundedOnscreenPass.shader.get());
 
         QMatrix4x4 projectionMatrix = viewport.projectionMatrix();
@@ -824,6 +832,7 @@ void BlurEffect::blur(const RenderTarget &renderTarget, const RenderViewport &vi
         m_roundedOnscreenPass.shader->setUniform(m_roundedOnscreenPass.boxLocation, QVector4D(nativeBox.horizontalCenter(), nativeBox.verticalCenter(), nativeBox.width() * 0.5, nativeBox.height() * 0.5));
         m_roundedOnscreenPass.shader->setUniform(m_roundedOnscreenPass.cornerRadiusLocation, nativeCornerRadius.toVector());
         m_roundedOnscreenPass.shader->setUniform(m_roundedOnscreenPass.opacityLocation, modulation);
+        m_roundedOnscreenPass.shader->setUniform(m_roundedOnscreenPass.cornerExponentLocation, cornerExponent);
 
         read->colorAttachment()->bind();
 

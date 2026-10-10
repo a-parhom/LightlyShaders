@@ -34,7 +34,9 @@ LightlyShadersKCM::save()
 void
 LightlyShadersKCM::updateSquircleRatioEnabled()
 {
-    ui.kcfg_SquircleRatio->setEnabled(ui.kcfg_CornersType->currentIndex() == LightlyShadersConfig::EnumCornersType::SquircledCorners);
+    const bool squircle = ui.kcfg_CornersType->currentIndex() == LightlyShadersConfig::EnumCornersType::SquircledCorners;
+    ui.squircleRatioLabel->setEnabled(squircle);
+    ui.kcfg_SquircleRatio->setEnabled(squircle);
 }
 
 } // namespace KWin
