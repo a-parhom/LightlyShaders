@@ -99,7 +99,9 @@ private Q_SLOTS:
     void wideOutlinesDontFillTheCorner();
     void innerOutlineWiderThanTheRadiusCoversTheCorner();
     void outerOutlineSitsOnTheEdge();
+    void outlineHasNoGapAtHalfPixelRadius();
     void shadowPassesThrough();
+    void sideWithoutShadowIsCut();
 
     void blurCircleMatchesKWin();
     void blurSquircleOnlyChangesCorners();
@@ -117,6 +119,8 @@ private:
     Image renderWindow(const WindowParams &params, const std::vector<unsigned char> &texture);
     Image renderBlur(GLuint program, float radius, float exponent);
     static std::vector<unsigned char> solidTexture(int width, int height, const Color &premultiplied);
+    // An opaque frame surrounded by a faint shadow, laid out like the texture KWin hands the shader
+    static std::vector<unsigned char> windowWithShadowTexture(const WindowParams &params);
 
     GLuint m_windowProgram = 0;
     GLuint m_blurProgram = 0;
@@ -233,6 +237,29 @@ std::vector<unsigned char> ShaderTest::solidTexture(int width, int height, const
 static std::vector<float> quad(float width, float height)
 {
     return {0, 0, 0, 0, width, 0, 1, 0, width, height, 1, 1, 0, 0, 0, 0, width, height, 1, 1, 0, height, 0, 1};
+}
+
+std::vector<unsigned char> ShaderTest::windowWithShadowTexture(const WindowParams &params)
+{
+    const int width = params.textureWidth();
+    const int height = params.textureHeight();
+    std::vector<unsigned char> texture(width * height * 4);
+    for (int y = 0; y < height; ++y) {
+        for (int x = 0; x < width; ++x) {
+            // Texture rows go up from the bottom, so the frame starts after the bottom shadow
+            const bool inFrame = x >= params.shadowLeft && x < params.shadowLeft + params.frameWidth && y >= params.shadowBottom
+                && y < params.shadowBottom + params.frameHeight;
+            unsigned char *pixel = &texture[(y * width + x) * 4];
+            if (inFrame) {
+                pixel[0] = pixel[1] = pixel[2] = 200;
+                pixel[3] = 255;
+            } else {
+                pixel[0] = pixel[1] = pixel[2] = 0;
+                pixel[3] = 40;
+            }
+        }
+    }
+    return texture;
 }
 
 Image ShaderTest::render(GLuint program,
@@ -451,6 +478,23 @@ void ShaderTest::outerOutlineSitsOnTheEdge()
     QVERIFY(maxDifference(image.at(100, 0), {0, 1, 0, 1}) < 0.01f);
 }
 
+void ShaderTest::outlineHasNoGapAtHalfPixelRadius()
+{
+    // Fractional scales give radii like 7.5, the pixel row whose center is exactly at the radius
+    // belongs neither to the corner nor to the straight edge unless the edge includes it
+    WindowParams params;
+    // Power of two sizes so the interpolated position lands exactly on the radius
+    params.frameWidth = 256;
+    params.frameHeight = 128;
+    params.radius = 7.5f;
+    params.drawOuterOutline = true;
+    params.outerOutlineColor = {0, 1, 0, 1};
+    const Image image = renderWindow(params, solidTexture(params.textureWidth(), params.textureHeight(), {0.5f, 0.5f, 0.5f, 1}));
+
+    QVERIFY(maxDifference(image.at(0, 7), {0, 1, 0, 1}) < 0.01f);
+    QVERIFY(maxDifference(image.at(7, 0), {0, 1, 0, 1}) < 0.01f);
+}
+
 void ShaderTest::shadowPassesThrough()
 {
     WindowParams params;
@@ -465,6 +509,38 @@ void ShaderTest::shadowPassesThrough()
     QVERIFY(maxDifference(image.at(5, 100), color) < 0.01f);
     QVERIFY(maxDifference(image.at(120, 5), color) < 0.01f);
     QVERIFY(maxDifference(image.at(120, 100), color) < 0.01f);
+}
+
+void ShaderTest::sideWithoutShadowIsCut()
+{
+    // Regression: shadows can be lopsided. With none at the top the rounded off area was filled
+    // from outside the texture, which repeats the frame's edge, so the top corners stayed square.
+    WindowParams params;
+    params.shadowLeft = 20;
+    params.shadowRight = 20;
+    params.shadowBottom = 30;
+    params.shadowTop = 0;
+    params.drawOuterOutline = true;
+    params.outerOutlineWidth = 2;
+    params.outerOutlineColor = {0, 1, 0, 1};
+    const Image image = renderWindow(params, windowWithShadowTexture(params));
+
+    const int left = int(params.shadowLeft);
+    const int right = int(params.shadowLeft + params.frameWidth) - 1;
+    const int bottom = int(params.shadowBottom);
+    const int top = int(params.shadowBottom + params.frameHeight) - 1;
+
+    // The top corners are cut away, there is no shadow there to fill them with
+    QVERIFY2(image.at(left, top).a < 0.05f, "Top left corner must be cut");
+    QVERIFY2(image.at(right, top).a < 0.05f, "Top right corner must be cut");
+    // The bottom corners are filled with the shadow from below, like before
+    QVERIFY(std::fabs(image.at(left, bottom).a - 40 / 255.0f) < 0.02f);
+    QVERIFY(std::fabs(image.at(right, bottom).a - 40 / 255.0f) < 0.02f);
+
+    // Without a shadow above, the outer outline is drawn inside the top edge, with one below it
+    // is drawn on the shadow just outside the bottom edge
+    QVERIFY(maxDifference(image.at(left + 100, top), {0, 1, 0, 1}) < 0.01f);
+    QVERIFY(maxDifference(image.at(left + 100, bottom - 1), {0, 1, 0, 1}) < 0.01f);
 }
 
 Image ShaderTest::renderBlur(GLuint program, float radius, float exponent)
