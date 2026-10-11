@@ -131,6 +131,15 @@ void LSHelper::windowDeleted(EffectWindow *w)
     m_managed.remove(w);
 }
 
+void LSHelper::reevaluate(EffectWindow *w)
+{
+    if (isManagedWindow(w)) {
+        m_managed.insert(w);
+    } else {
+        m_managed.remove(w);
+    }
+}
+
 bool LSHelper::isManaged(EffectWindow *w) const
 {
     return m_managed.contains(w);

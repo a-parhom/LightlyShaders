@@ -83,8 +83,18 @@ void LightlyShadersEffect::windowAdded(EffectWindow *w)
     // Connected for every window, a reconfigure can change which ones are managed
     connect(w, &EffectWindow::windowFullScreenChanged, this, &LightlyShadersEffect::updateRedirect);
     connect(w, &EffectWindow::windowMaximizedStateChanged, this, &LightlyShadersEffect::updateRedirect);
-    connect(w->window(), &Window::tileChanged, this, [this, w]() {
-        updateRedirect(w);
+    // These come from the Window, which can outlive its EffectWindow
+    connect(w->window(), &Window::tileChanged, this, [this, window = QPointer<EffectWindow>(w)]() {
+        if (window) {
+            updateRedirect(window);
+        }
+    });
+    // Some applications only set their window class after the window is shown
+    connect(w->window(), &Window::windowClassChanged, this, [this, window = QPointer<EffectWindow>(w)]() {
+        if (window) {
+            m_helper.reevaluate(window);
+            updateRedirect(window);
+        }
     });
     updateRedirect(w);
 }

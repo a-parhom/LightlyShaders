@@ -347,8 +347,14 @@ void BlurEffect::slotWindowAdded(EffectWindow *w)
         internal->installEventFilter(this);
     }
 
-    // Check if window needs rounding corners
+    // Check if window needs rounding corners, again when its window class changes
     m_helper.windowAdded(w);
+    connect(w->window(), &Window::windowClassChanged, this, [this, window = QPointer<EffectWindow>(w)]() {
+        if (window) {
+            m_helper.reevaluate(window);
+            window->addRepaintFull();
+        }
+    });
 
     setupDecorationConnections(w);
     connect(w, &EffectWindow::windowDecorationChanged, this, [this, w]() {

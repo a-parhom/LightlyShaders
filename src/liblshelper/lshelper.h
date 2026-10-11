@@ -23,6 +23,8 @@ public:
 
     void windowAdded(EffectWindow *w);
     void windowDeleted(EffectWindow *w);
+    // Re-decides whether the window is managed, e.g. after its window class changed
+    void reevaluate(EffectWindow *w);
 
     // Whether the window gets rounded corners at all, depending on its type and class
     bool isManaged(EffectWindow *w) const;
