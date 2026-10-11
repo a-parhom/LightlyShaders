@@ -1,5 +1,10 @@
-find_package(Qt6 ${QT_MIN_VERSION} CONFIG REQUIRED COMPONENTS Test)
-find_package(epoxy REQUIRED)
+# Only needed for the tests, so building the effect doesn't depend on them
+find_package(Qt6Test ${QT_MIN_VERSION} CONFIG QUIET)
+find_package(epoxy QUIET)
+if(NOT Qt6Test_FOUND OR NOT epoxy_FOUND)
+    message(STATUS "Qt6Test or epoxy not found, not building the tests")
+    return()
+endif()
 
 # Renders the shaders from the source tree on the GPU, skipped when no GPU is available
 add_executable(shadertest shadertest.cpp)
