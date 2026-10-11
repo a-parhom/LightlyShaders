@@ -15,11 +15,11 @@ LightlyShadersKCM::LightlyShadersKCM(QObject *parent, const KPluginMetaData &dat
     ui.setupUi(widget());
     addConfig(LightlyShadersConfig::self(), widget());
 
-    connect(ui.kcfg_CornersType, &QComboBox::currentIndexChanged, this, &LightlyShadersKCM::updateSquircleRatioEnabled);
-    updateSquircleRatioEnabled();
-
-    connect(ui.kcfg_InactiveOutlines, &QCheckBox::toggled, this, &LightlyShadersKCM::updateInactiveOutlinesEnabled);
-    updateInactiveOutlinesEnabled();
+    connect(ui.kcfg_CornersType, &QComboBox::currentIndexChanged, this, &LightlyShadersKCM::updateEnabledWidgets);
+    connect(ui.kcfg_InnerOutline, &QCheckBox::toggled, this, &LightlyShadersKCM::updateEnabledWidgets);
+    connect(ui.kcfg_OuterOutline, &QCheckBox::toggled, this, &LightlyShadersKCM::updateEnabledWidgets);
+    connect(ui.kcfg_InactiveOutlines, &QCheckBox::toggled, this, &LightlyShadersKCM::updateEnabledWidgets);
+    updateEnabledWidgets();
 }
 
 void LightlyShadersKCM::save()
@@ -31,20 +31,27 @@ void LightlyShadersKCM::save()
     interface.reconfigureEffect(QStringLiteral("lightlyshaders_blur"));
 }
 
-void LightlyShadersKCM::updateSquircleRatioEnabled()
+void LightlyShadersKCM::updateEnabledWidgets()
 {
     const bool squircle = ui.kcfg_CornersType->currentIndex() == LightlyShadersConfig::EnumCornersType::SquircledCorners;
     ui.squircleRatioLabel->setEnabled(squircle);
     ui.kcfg_SquircleRatio->setEnabled(squircle);
-}
 
-void LightlyShadersKCM::updateInactiveOutlinesEnabled()
-{
-    const bool enabled = ui.kcfg_InactiveOutlines->isChecked();
-    ui.inactiveInnerOutlineLabel->setEnabled(enabled);
-    ui.kcfg_InactiveInnerOutlineColor->setEnabled(enabled);
-    ui.inactiveOuterOutlineLabel->setEnabled(enabled);
-    ui.kcfg_InactiveOuterOutlineColor->setEnabled(enabled);
+    const bool inner = ui.kcfg_InnerOutline->isChecked();
+    ui.kcfg_InnerOutlineColor->setEnabled(inner);
+    ui.innerOutlineWidthLabel->setEnabled(inner);
+    ui.kcfg_InnerOutlineWidth->setEnabled(inner);
+
+    const bool outer = ui.kcfg_OuterOutline->isChecked();
+    ui.kcfg_OuterOutlineColor->setEnabled(outer);
+    ui.outerOutlineWidthLabel->setEnabled(outer);
+    ui.kcfg_OuterOutlineWidth->setEnabled(outer);
+
+    const bool inactive = ui.kcfg_InactiveOutlines->isChecked();
+    ui.inactiveInnerOutlineLabel->setEnabled(inactive && inner);
+    ui.kcfg_InactiveInnerOutlineColor->setEnabled(inactive && inner);
+    ui.inactiveOuterOutlineLabel->setEnabled(inactive && outer);
+    ui.kcfg_InactiveOuterOutlineColor->setEnabled(inactive && outer);
 }
 
 } // namespace KWin

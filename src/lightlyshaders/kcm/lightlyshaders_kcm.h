@@ -16,8 +16,8 @@ public:
     void save() override;
 
 private:
-    void updateSquircleRatioEnabled();
-    void updateInactiveOutlinesEnabled();
+    // Greys out the settings that have no effect with the current choices
+    void updateEnabledWidgets();
 
     Ui::LightlyShadersKCM ui;
 };
