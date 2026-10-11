@@ -28,7 +28,7 @@
 
 #include <QVector2D>
 
-Q_LOGGING_CATEGORY(LIGHTLYSHADERS, "kwin_effect_lightlyshaders", QtWarningMsg)
+Q_STATIC_LOGGING_CATEGORY(LIGHTLYSHADERS, "kwin_effect_lightlyshaders", QtWarningMsg)
 
 namespace KWin
 {
@@ -37,8 +37,6 @@ KWIN_EFFECT_FACTORY_SUPPORTED(LightlyShadersEffect, "lightlyshaders.json", retur
 
 LightlyShadersEffect::LightlyShadersEffect()
 {
-    reconfigure(ReconfigureAll);
-
     m_shader = ShaderManager::instance()->generateShaderFromFile(ShaderTrait::MapTexture,
                                                                  QString(),
                                                                  QStringLiteral(":/effects/lightlyshaders/shaders/lightlyshaders.frag"));
@@ -63,9 +61,11 @@ LightlyShadersEffect::LightlyShadersEffect()
         .isSquircle = m_shader->uniformLocation("is_squircle"),
     };
 
+    // Decides which windows are managed and redirects them
+    reconfigure(ReconfigureAll);
     const auto stackingOrder = effects->stackingOrder();
     for (EffectWindow *window : stackingOrder) {
-        windowAdded(window);
+        watchWindow(window);
     }
 
     connect(effects, &EffectsHandler::windowAdded, this, &LightlyShadersEffect::windowAdded);
@@ -78,8 +78,13 @@ LightlyShadersEffect::~LightlyShadersEffect() = default;
 
 void LightlyShadersEffect::windowAdded(EffectWindow *w)
 {
-    m_helper.windowAdded(w);
+    m_helper.reevaluate(w);
+    watchWindow(w);
+    updateRedirect(w);
+}
 
+void LightlyShadersEffect::watchWindow(EffectWindow *w)
+{
     // Connected for every window, a reconfigure can change which ones are managed
     connect(w, &EffectWindow::windowFullScreenChanged, this, &LightlyShadersEffect::updateRedirect);
     connect(w, &EffectWindow::windowMaximizedStateChanged, this, &LightlyShadersEffect::updateRedirect);
@@ -89,14 +94,18 @@ void LightlyShadersEffect::windowAdded(EffectWindow *w)
             updateRedirect(window);
         }
     });
-    // Some applications only set their window class after the window is shown
-    connect(w->window(), &Window::windowClassChanged, this, [this, window = QPointer<EffectWindow>(w)]() {
+
+    // Whether the window is managed depends on its class, caption and decoration, which some
+    // applications only set after the window is shown
+    const auto reevaluate = [this, window = QPointer<EffectWindow>(w)]() {
         if (window) {
             m_helper.reevaluate(window);
             updateRedirect(window);
         }
-    });
-    updateRedirect(w);
+    };
+    connect(w->window(), &Window::windowClassChanged, this, reevaluate);
+    connect(w->window(), &Window::captionChanged, this, reevaluate);
+    connect(w, &EffectWindow::windowDecorationChanged, this, reevaluate);
 }
 
 void LightlyShadersEffect::windowDeleted(EffectWindow *w)
@@ -125,10 +134,8 @@ void LightlyShadersEffect::updateRedirect(EffectWindow *w)
     }
 }
 
-void LightlyShadersEffect::reconfigure(ReconfigureFlags flags)
+void LightlyShadersEffect::reconfigure(ReconfigureFlags)
 {
-    Q_UNUSED(flags)
-
     m_helper.reconfigure();
 
     m_innerOutline = LightlyShadersConfig::innerOutline();
@@ -196,7 +203,7 @@ void LightlyShadersEffect::drawWindow(const RenderTarget &renderTarget,
     m_shader->setUniform(m_uniforms.drawInnerOutline, int(m_innerOutline));
     m_shader->setUniform(m_uniforms.drawOuterOutline, int(m_outerOutline));
     m_shader->setUniform(m_uniforms.squircleRatio, m_helper.squircleRatio());
-    m_shader->setUniform(m_uniforms.isSquircle, int(m_helper.cornersType() == LSHelper::SquircledCorners));
+    m_shader->setUniform(m_uniforms.isSquircle, int(m_helper.isSquircle()));
 
     OffscreenEffect::drawWindow(renderTarget, viewport, w, mask, deviceRegion, data);
 

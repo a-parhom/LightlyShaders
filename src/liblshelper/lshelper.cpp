@@ -30,14 +30,14 @@ void LSHelper::reconfigure()
 {
     LightlyShadersConfig::self()->load();
 
-    m_cornersType = static_cast<CornersType>(LightlyShadersConfig::cornersType());
+    m_squircle = LightlyShadersConfig::cornersType() == LightlyShadersConfig::EnumCornersType::SquircledCorners;
     m_squircleRatio = LightlyShadersConfig::squircleRatio();
     m_shadowOffset = LightlyShadersConfig::shadowOffset();
     m_size = LightlyShadersConfig::roundness();
     m_disabledForMaximized = LightlyShadersConfig::disabledForMaximized();
     m_disabledForTiled = LightlyShadersConfig::disabledForTiled();
 
-    if (m_cornersType == SquircledCorners) {
+    if (m_squircle) {
         m_size = static_cast<int>(m_size * 0.5 * m_squircleRatio);
     }
 
@@ -56,7 +56,7 @@ void LSHelper::reconfigure()
     m_managed.clear();
     const auto stackingOrder = effects->stackingOrder();
     for (EffectWindow *window : stackingOrder) {
-        windowAdded(window);
+        reevaluate(window);
     }
 }
 
@@ -107,7 +107,7 @@ bool LSHelper::isManagedWindow(EffectWindow *w) const
     }
 
     // JetBrains IDEs use normal windows captioned "win<N>" for their popups
-    static const QRegularExpression jetbrainsPopup(QStringLiteral("win[0-9]+"));
+    static const QRegularExpression jetbrainsPopup(QStringLiteral("^win[0-9]+$"));
     if (classContains(QStringLiteral("jetbrains")) && w->caption().contains(jetbrainsPopup)) {
         return false;
     }
@@ -119,18 +119,6 @@ bool LSHelper::isManagedWindow(EffectWindow *w) const
     return true;
 }
 
-void LSHelper::windowAdded(EffectWindow *w)
-{
-    if (isManagedWindow(w)) {
-        m_managed.insert(w);
-    }
-}
-
-void LSHelper::windowDeleted(EffectWindow *w)
-{
-    m_managed.remove(w);
-}
-
 void LSHelper::reevaluate(EffectWindow *w)
 {
     if (isManagedWindow(w)) {
@@ -138,6 +126,11 @@ void LSHelper::reevaluate(EffectWindow *w)
     } else {
         m_managed.remove(w);
     }
+}
+
+void LSHelper::windowDeleted(EffectWindow *w)
+{
+    m_managed.remove(w);
 }
 
 bool LSHelper::isManaged(EffectWindow *w) const

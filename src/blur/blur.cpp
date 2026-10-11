@@ -348,7 +348,7 @@ void BlurEffect::slotWindowAdded(EffectWindow *w)
     }
 
     // Check if window needs rounding corners, again when its window class changes
-    m_helper.windowAdded(w);
+    m_helper.reevaluate(w);
     connect(w->window(), &Window::windowClassChanged, this, [this, window = QPointer<EffectWindow>(w)]() {
         if (window) {
             m_helper.reevaluate(window);
@@ -802,7 +802,7 @@ void BlurEffect::blur(const RenderTarget &renderTarget, const RenderViewport &vi
     float cornerExponent = 2.0;
     if (m_helper.shouldRound(w) && m_helper.cornersFit(w)) {
         cornerRadius = BorderRadius(m_helper.roundness());
-        if (m_helper.cornersType() == LSHelper::SquircledCorners) {
+        if (m_helper.isSquircle()) {
             cornerExponent = m_helper.squircleRatio();
         }
     }

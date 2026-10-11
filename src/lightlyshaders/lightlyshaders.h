@@ -60,6 +60,8 @@ public:
 
 private:
     void windowAdded(EffectWindow *w);
+    // Follows the window's state changes that decide whether it is rounded
+    void watchWindow(EffectWindow *w);
     void windowDeleted(EffectWindow *w);
     void updateRedirect(EffectWindow *w);
     void windowActivated(EffectWindow *w);

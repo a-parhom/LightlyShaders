@@ -13,18 +13,12 @@ namespace KWin
 class LSHelper
 {
 public:
-    enum CornersType {
-        RoundedCorners = 0,
-        SquircledCorners
-    };
-
     // Reloads the settings and re-decides which windows are managed
     void reconfigure();
 
-    void windowAdded(EffectWindow *w);
-    void windowDeleted(EffectWindow *w);
-    // Re-decides whether the window is managed, e.g. after its window class changed
+    // Decides whether the window is managed, again whenever a property it depends on changed
     void reevaluate(EffectWindow *w);
+    void windowDeleted(EffectWindow *w);
 
     // Whether the window gets rounded corners at all, depending on its type and class
     bool isManaged(EffectWindow *w) const;
@@ -43,9 +37,9 @@ public:
     {
         return m_shadowOffset;
     }
-    CornersType cornersType() const
+    bool isSquircle() const
     {
-        return m_cornersType;
+        return m_squircle;
     }
     int squircleRatio() const
     {
@@ -56,7 +50,7 @@ private:
     bool isManagedWindow(EffectWindow *w) const;
 
     int m_size = 0;
-    CornersType m_cornersType = RoundedCorners;
+    bool m_squircle = false;
     int m_squircleRatio = 0;
     int m_shadowOffset = 0;
     bool m_disabledForMaximized = false;
