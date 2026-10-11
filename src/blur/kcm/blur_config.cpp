@@ -25,10 +25,6 @@ BlurEffectConfig::BlurEffectConfig(QObject *parent, const KPluginMetaData &data)
     addConfig(BlurConfig::self(), widget());
 }
 
-BlurEffectConfig::~BlurEffectConfig()
-{
-}
-
 void BlurEffectConfig::save()
 {
     KCModule::save();

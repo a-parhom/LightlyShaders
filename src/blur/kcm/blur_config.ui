@@ -35,7 +35,7 @@
         <number>1</number>
        </property>
        <property name="value">
-        <number>10</number>
+        <number>15</number>
        </property>
        <property name="orientation">
         <enum>Qt::Orientation::Horizontal</enum>
@@ -156,14 +156,14 @@
      <item>
       <layout class="QHBoxLayout" name="horizontalLayout_3">
        <item>
-        <widget class="QLabel" name="labelSaturationStrong">
+        <widget class="QLabel" name="labelSaturationNone">
          <property name="text">
           <string>None</string>
          </property>
         </widget>
        </item>
        <item>
-        <widget class="QLabel" name="labelSaturationNone">
+        <widget class="QLabel" name="labelSaturationStrong">
          <property name="text">
           <string>Strong</string>
          </property>

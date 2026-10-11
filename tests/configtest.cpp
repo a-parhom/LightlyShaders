@@ -5,6 +5,7 @@
     SPDX-License-Identifier: GPL-2.0-or-later
 */
 
+#include "blurconfig.h"
 #include "lightlyshaders_config.h"
 
 #include <QDir>
@@ -12,6 +13,7 @@
 #include <QStandardPaths>
 #include <QTest>
 
+using KWin::BlurConfig;
 using KWin::LightlyShadersConfig;
 
 class ConfigTest : public QObject
@@ -23,6 +25,8 @@ private Q_SLOTS:
     void cleanup();
     void defaultsAreInRange();
     void brokenValuesAreClamped();
+    // A blur strength outside of 1 to 15 indexed past the strength table and crashed KWin
+    void brokenBlurValuesAreClamped();
 
 private:
     void writeConfig(const QByteArray &contents);
@@ -73,6 +77,30 @@ void ConfigTest::brokenValuesAreClamped()
     QCOMPARE(LightlyShadersConfig::innerOutlineWidth(), 1);
     QCOMPARE(LightlyShadersConfig::outerOutlineWidth(), 10);
     QCOMPARE(LightlyShadersConfig::squircleRatio(), 2);
+}
+
+void ConfigTest::brokenBlurValuesAreClamped()
+{
+    const QString path = QStandardPaths::writableLocation(QStandardPaths::GenericConfigLocation) + QStringLiteral("/kwinrc");
+    QFile file(path);
+    QVERIFY(file.open(QIODevice::WriteOnly));
+    file.write("[Effect-blur]\nBlurStrength=0\nNoiseStrength=1000\nSaturation=-5\n");
+    file.close();
+
+    BlurConfig::instance(QStringLiteral("kwinrc"));
+    BlurConfig::self()->read();
+    QCOMPARE(BlurConfig::blurStrength(), 1);
+    QCOMPARE(BlurConfig::noiseStrength(), 14);
+    QCOMPARE(BlurConfig::saturation(), 100);
+
+    QVERIFY(file.open(QIODevice::WriteOnly));
+    file.write("[Effect-blur]\nBlurStrength=99\n");
+    file.close();
+    BlurConfig::self()->config()->reparseConfiguration();
+    BlurConfig::self()->read();
+    QCOMPARE(BlurConfig::blurStrength(), 15);
+
+    QFile::remove(path);
 }
 
 QTEST_GUILESS_MAIN(ConfigTest)

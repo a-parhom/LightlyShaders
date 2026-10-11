@@ -56,7 +56,6 @@ public:
     ~BlurEffect() override;
 
     static bool supported();
-    static bool enabledByDefault();
 
     void reconfigure(ReconfigureFlags flags) override;
     void prePaintScreen(ScreenPrePaintData &data) override;

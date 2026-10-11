@@ -98,8 +98,5 @@
         "Name[zh_CN]": "窗口背景虚化 (LightlyShaders)",
         "Name[zh_TW]": "模糊 (LightlyShaders)"
     },
-    "X-KDE-ConfigModule": "kwin_lightlyshaders_blur_config",
-    "org.kde.kwin.effect": {
-        "enabledByDefaultMethod": true
-    }
+    "X-KDE-ConfigModule": "kwin_lightlyshaders_blur_config"
 }

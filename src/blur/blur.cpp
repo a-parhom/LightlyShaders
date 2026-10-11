@@ -15,12 +15,8 @@
 #include "effect/effecthandler.h"
 #include "opengl/glplatform.h"
 #include "scene/backgroundeffectitem.h"
-#include "scene/decorationitem.h"
-#include "scene/scene.h"
-#include "scene/surfaceitem.h"
 #include "scene/windowitem.h"
 #include "wayland/backgroundeffect_v1.h"
-#include "wayland/display.h"
 #include "wayland/surface.h"
 #include "wayland_server.h"
 #include "window.h"
@@ -34,23 +30,13 @@
 #include <QMatrix4x4>
 #include <QScreen>
 #include <QTime>
-#include <QTimer>
 #include <QWindow>
 #include <cmath> // for ceil()
 #include <cstdlib>
 
-#include <KConfigGroup>
-#include <KSharedConfig>
-
 #include <KDecoration3/Decoration>
 
-Q_LOGGING_CATEGORY(KWIN_BLUR, "kwin_effect_blur", QtWarningMsg)
-
-static void ensureResources()
-{
-    // Must initialize resources manually because the effect is a static lib.
-    Q_INIT_RESOURCE(blur);
-}
+Q_STATIC_LOGGING_CATEGORY(KWIN_BLUR, "kwin_effect_blur", QtWarningMsg)
 
 namespace KWin
 {
@@ -88,7 +74,6 @@ static QMatrix4x4 colorTransformMatrix(qreal saturation, qreal contrast)
 BlurEffect::BlurEffect()
 {
     BlurConfig::instance(effects->config());
-    ensureResources();
 
     m_onscreenPass.shader = ShaderManager::instance()->generateShaderFromFile(ShaderTrait::MapTexture,
                                                                               QStringLiteral(":/effects/blur/shaders/vertex.vert"),
@@ -187,7 +172,10 @@ BlurEffect::BlurEffect()
 
 BlurEffect::~BlurEffect()
 {
-    waylandServer()->backgroundEffectManager()->removeBlurCapability();
+    // The constructor returns early, before adding the capability, when a shader fails to load
+    if (m_valid) {
+        waylandServer()->backgroundEffectManager()->removeBlurCapability();
+    }
 }
 
 void BlurEffect::initBlurStrengthValues()
@@ -248,9 +236,8 @@ void BlurEffect::initBlurStrengthValues()
     }
 }
 
-void BlurEffect::reconfigure(ReconfigureFlags flags)
+void BlurEffect::reconfigure(ReconfigureFlags)
 {
-    Q_UNUSED(flags)
     BlurConfig::self()->read();
 
     int blurStrength = BlurConfig::blurStrength() - 1;
@@ -338,26 +325,27 @@ void BlurEffect::slotWindowAdded(EffectWindow *w)
 
     if (surf) {
         windowBlurChangedConnections[w] = connect(surf, &SurfaceInterface::blurChanged, this, [this, w]() {
-            if (w) {
-                updateBlurRegion(w);
-            }
+            updateBlurRegion(w);
         });
     }
     if (auto internal = w->internalWindow()) {
         internal->installEventFilter(this);
     }
 
-    // Check if window needs rounding corners, again when its window class changes
+    // Check if window needs rounding corners, again when a property that decides it changes
     m_helper.reevaluate(w);
-    connect(w->window(), &Window::windowClassChanged, this, [this, window = QPointer<EffectWindow>(w)]() {
+    const auto reevaluate = [this, window = QPointer<EffectWindow>(w)]() {
         if (window) {
             m_helper.reevaluate(window);
             window->addRepaintFull();
         }
-    });
+    };
+    connect(w->window(), &Window::windowClassChanged, this, reevaluate);
+    connect(w->window(), &Window::captionChanged, this, reevaluate);
 
     setupDecorationConnections(w);
     connect(w, &EffectWindow::windowDecorationChanged, this, [this, w]() {
+        m_helper.reevaluate(w);
         setupDecorationConnections(w);
         updateBlurRegion(w);
     });
@@ -420,12 +408,6 @@ bool BlurEffect::eventFilter(QObject *watched, QEvent *event)
             }
         }
     }
-    return false;
-}
-
-bool BlurEffect::enabledByDefault()
-{
-    // Replaces the stock blur effect, which is enabled by default; the user has to switch manually
     return false;
 }
 
@@ -493,7 +475,7 @@ bool BlurEffect::shouldBlur(const EffectWindow *w, int mask, const WindowPaintDa
         return false;
     }
 
-    bool scaled = !qFuzzyCompare(data.xScale(), 1.0) && !qFuzzyCompare(data.yScale(), 1.0);
+    bool scaled = !qFuzzyCompare(data.xScale(), 1.0) || !qFuzzyCompare(data.yScale(), 1.0);
     bool translated = data.xTranslation() || data.yTranslation();
 
     if ((scaled || (translated || (mask & PAINT_WINDOW_TRANSFORMED))) && !w->data(WindowForceBlurRole).toBool()) {
@@ -517,7 +499,8 @@ GLTexture *BlurEffect::ensureNoiseTexture()
         return nullptr;
     }
 
-    const qreal scale = std::max(1.0, QGuiApplication::primaryScreen()->logicalDotsPerInch() / 96.0);
+    const QScreen *screen = QGuiApplication::primaryScreen();
+    const qreal scale = screen ? std::max(1.0, screen->logicalDotsPerInch() / 96.0) : 1.0;
     if (!m_noisePass.noiseTexture || m_noisePass.noiseTextureScale != scale || m_noisePass.noiseTextureStength != m_noiseStrength) {
         // Init randomness based on time
         std::srand((uint)QTime::currentTime().msec());
@@ -797,10 +780,11 @@ void BlurEffect::blur(const RenderTarget &renderTarget, const RenderViewport &vi
 
     const float modulation = opacity * opacity;
 
-    // LightlyShaders: windows it rounds get their blur clipped to the same corner shape
+    // LightlyShaders: windows it rounds get their blur clipped to the same corner shape,
+    // as long as the LightlyShaders effect is there to round the windows themselves
     BorderRadius cornerRadius = w->window()->borderRadius();
     float cornerExponent = 2.0;
-    if (m_helper.shouldRound(w) && m_helper.cornersFit(w)) {
+    if (effects->isEffectLoaded(QStringLiteral("kwin_effect_lightlyshaders")) && m_helper.shouldRound(w) && m_helper.cornersFit(w)) {
         cornerRadius = BorderRadius(m_helper.roundness());
         if (m_helper.isSquircle()) {
             cornerExponent = m_helper.squircleRatio();
