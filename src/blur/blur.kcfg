@@ -7,9 +7,18 @@
     <group name="Effect-blur">
         <entry name="BlurStrength" type="Int">
             <default>15</default>
+            <min>1</min>
+            <max>15</max>
         </entry>
         <entry name="NoiseStrength" type="Int">
             <default>5</default>
+            <min>0</min>
+            <max>14</max>
+        </entry>
+        <entry name="Saturation" type="Int">
+            <default>150</default>
+            <min>100</min>
+            <max>500</max>
         </entry>
     </group>
 </kcfg>

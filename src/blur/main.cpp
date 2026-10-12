@@ -9,11 +9,8 @@
 namespace KWin
 {
 
-KWIN_EFFECT_FACTORY_SUPPORTED_ENABLED(BlurEffect,
-                                      "metadata.json",
-                                      return BlurEffect::supported();
-                                      ,
-                                      return BlurEffect::enabledByDefault();)
+// Disabled by default through metadata.json, it replaces the stock blur, which the user has to switch off
+KWIN_EFFECT_FACTORY_SUPPORTED(BlurEffect, "metadata.json", return BlurEffect::supported();)
 
 } // namespace KWin
 

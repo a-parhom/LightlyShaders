@@ -1,7 +1,7 @@
 #pragma once
- 
-#include <kcmodule.h>
-#include "lightlyshaders_config.h"
+
+#include <KCModule>
+
 #include "ui_lightlyshaders_config.h"
 
 namespace KWin
@@ -11,15 +11,14 @@ class LightlyShadersKCM : public KCModule
 {
     Q_OBJECT
 public:
-    explicit LightlyShadersKCM(QObject* parent, const KPluginMetaData &data);
-public Q_SLOTS:
+    explicit LightlyShadersKCM(QObject *parent, const KPluginMetaData &data);
+
     void save() override;
-    void load() override;
-    void defaults() override;
-    void updateChanged();
 
 private:
-    void setChanged(bool value);
+    // Greys out the settings that have no effect with the current choices
+    void updateEnabledWidgets();
+
     Ui::LightlyShadersKCM ui;
 };
 

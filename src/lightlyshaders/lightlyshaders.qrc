@@ -1,6 +1,5 @@
 <!DOCTYPE RCC><RCC version="1.0">
 <qresource prefix="/effects/lightlyshaders/">
   <file>shaders/lightlyshaders.frag</file>
-  <file>shaders/lightlyshaders_core.frag</file>
 </qresource>
 </RCC>

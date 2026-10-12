@@ -1,10 +1,10 @@
-#version 110
+#version 140
 
 uniform sampler2D sampler;
 
 uniform vec2 expanded_size;
 uniform vec2 frame_size;
-uniform vec3 shadow_size;
+uniform vec2 shadow_origin; // frame position inside the texture: left and bottom shadow size
 uniform float radius;
 uniform float shadow_sample_offset;
 uniform bool draw_inner_outline;
@@ -16,16 +16,15 @@ uniform vec4 outer_outline_color;
 uniform int squircle_ratio;
 uniform bool is_squircle;
 
-uniform mat4 modelViewProjectionMatrix;
-
 uniform vec4 modulation;
-uniform float saturation;
 
-varying vec2 texcoord0;
+in vec2 texcoord0;
+out vec4 fragColor;
 
 #include "colormanagement.glsl"
+#include "saturation.glsl"
 
-//Used code from https://github.com/yilozt/rounded-window-corners project
+// Used code from https://github.com/yilozt/rounded-window-corners project
 float squircleBounds(vec2 p, vec2 center, float clip_radius)
 {
     vec2 delta = abs(p - center);
@@ -39,415 +38,156 @@ float squircleBounds(vec2 p, vec2 center, float clip_radius)
     return clamp(clip_radius - dist + 0.5, 0.0, 1.0);
 }
 
-//Used code from https://github.com/yilozt/rounded-window-corners project
+// Used code from https://github.com/yilozt/rounded-window-corners project
 float circleBounds(vec2 p, vec2 center, float clip_radius)
 {
-    vec2 delta = p - vec2(center.x, center.y);
+    vec2 delta = p - center;
     float dist_squared = dot(delta, delta);
 
+    // The radius gets negative when outlines are wider than the corner, check the
+    // signs before squaring so such a circle covers nothing instead of everything
     float outer_radius = clip_radius + 0.5;
-    if(dist_squared >= (outer_radius * outer_radius))
+    if (outer_radius <= 0.0 || dist_squared >= (outer_radius * outer_radius))
         return 0.0;
 
     float inner_radius = clip_radius - 0.5;
-    if(dist_squared <= (inner_radius * inner_radius))
+    if (inner_radius > 0.0 && dist_squared <= (inner_radius * inner_radius))
         return 1.0;
 
     return outer_radius - sqrt(dist_squared);
 }
 
+float cornerBounds(vec2 p, vec2 center, float clip_radius)
+{
+    if (is_squircle) {
+        return squircleBounds(p, center, clip_radius);
+    }
+    return circleBounds(p, center, clip_radius);
+}
+
+// The texture is premultiplied, so coverage scales all four channels
 vec4 shapeWindow(vec4 tex, vec2 p, vec2 center, float clip_radius)
 {
-    float alpha;
-    if(is_squircle) {
-        alpha = squircleBounds(p, center, clip_radius);
-    } else {
-        alpha = circleBounds(p, center, clip_radius);
-    }
-    return vec4(tex.rgb*alpha, min(alpha, tex.a));
+    return tex * cornerBounds(p, center, clip_radius);
 }
 
+// Like shapeWindow, but fills the area cut off by the rounding with the shadow continued
+// from just outside the corner (start), so the shadow follows the rounded shape
 vec4 shapeShadowWindow(vec2 start, vec4 tex, vec2 p, vec2 center, float clip_radius)
 {
-    vec2 ShadowHorCoord = vec2(texcoord0.x, start.y);
-    vec2 ShadowVerCoord = vec2(start.x, texcoord0.y);
+    vec4 shadow_horizontal = texture(sampler, vec2(texcoord0.x, start.y));
+    vec4 shadow_vertical = texture(sampler, vec2(start.x, texcoord0.y));
+    vec4 shadow_corner = texture(sampler, start);
+    vec4 shadow = shadow_horizontal + (shadow_vertical - shadow_corner);
 
-    vec4 texShadowHorCur = texture2D(sampler, ShadowHorCoord);
-    vec4 texShadowVerCur = texture2D(sampler, ShadowVerCoord);
-    vec4 texShadow0 = texture2D(sampler, start);
-
-    vec4 texShadow = texShadowHorCur + (texShadowVerCur - texShadow0);
-
-    float alpha;
-    if(is_squircle) {
-        alpha = squircleBounds(p, center, clip_radius);
-    } else {
-        alpha = circleBounds(p, center, clip_radius);
-    }
-
-    if(alpha == 0.0) {
-        return texShadow;
-    } else if(alpha < 1.0) {
-        return mix(vec4(tex.rgb*alpha, min(alpha, tex.a)), texShadow, 1.0-alpha);
-    } else {
-        return tex;
-    }
+    float alpha = cornerBounds(p, center, clip_radius);
+    return mix(shadow, tex * alpha, alpha);
 }
 
-vec4 cornerOutline(vec4 outColor, bool inner, vec2 coord0, float radius, vec2 center, float outline_width, bool invert)
+// Whether a distance inwards from the window edge is within an outline band
+bool inBand(float across, float band_start, float width)
 {
-    vec4 outline_color;
-    float radius_delta_inner;
-    float radius_delta_outer;
+    return across >= band_start && across <= band_start + width;
+}
 
-    if(inner) {
-        outline_color = inner_outline_color;
-        radius_delta_outer = 0.0;
-        radius_delta_inner = -outline_width;
-
-        if(invert) {
-            radius_delta_inner = 0.0;
-            radius_delta_outer = outline_width;
-        }
-    } else {
-        outline_color = outer_outline_color;
-        radius_delta_inner = 0.0;
-        radius_delta_outer = outline_width;
-
-        if(invert) {
-            radius_delta_outer = 0.0;
-            radius_delta_inner = -outline_width;
-        }
-    }
-
-    float outline_alpha;
-    float outline_alpha_inner;
-    float outline_alpha_outer;
-
-    if(is_squircle) {
-        outline_alpha_inner = squircleBounds(coord0, vec2(center.x, center.y), radius + radius_delta_inner);
-        outline_alpha_outer = squircleBounds(coord0, vec2(center.x, center.y), radius + radius_delta_outer);
-    } else {
-        outline_alpha_inner = circleBounds(coord0, vec2(center.x, center.y), radius + radius_delta_inner);
-        outline_alpha_outer = circleBounds(coord0, vec2(center.x, center.y), radius + radius_delta_outer);
-    }
-    outline_alpha = 1.0 - clamp(abs(outline_alpha_outer - outline_alpha_inner), 0.0, 1.0);
-    outColor = mix(outColor, vec4(outline_color.rgb,1.0), (1.0-outline_alpha) * outline_color.a);
-    return outColor;
+// Blends an outline into the corner. Like the straight edge outlines, the band is
+// band_start to band_start + width inwards from the window edge (negative is outside).
+vec4 cornerOutline(vec4 color, vec4 outline_color, vec2 p, vec2 center, float band_start, float width)
+{
+    float coverage_outer = cornerBounds(p, center, radius - band_start);
+    float coverage_inner = cornerBounds(p, center, radius - band_start - width);
+    float outline_alpha = clamp(coverage_outer - coverage_inner, 0.0, 1.0);
+    return mix(color, vec4(outline_color.rgb, 1.0), outline_alpha * outline_color.a);
 }
 
 void main()
 {
-    vec4 tex = texture2D(sampler, texcoord0);
-    vec2 coord0;
-    vec4 outColor;
-    float start_x;
-    float start_y;
+    vec4 tex = texture(sampler, texcoord0);
 
-    float f_shadow_sample_offset = float(shadow_sample_offset);
-    float f_radius = float(radius);
+    // The texture covers the whole window including its shadow, if there is one. Work in
+    // coordinates relative to the frame's bottom left corner (texture coordinates are y-up).
+    bool has_shadow = expanded_size != frame_size;
+    vec2 tex_size = has_shadow ? expanded_size : frame_size;
+    vec2 origin = has_shadow ? shadow_origin : vec2(0.0);
+    vec2 p = texcoord0 * tex_size - origin;
 
-    //Window without shadow
-    if(expanded_size == frame_size) {
-        coord0 = vec2(texcoord0.x*frame_size.x, texcoord0.y*frame_size.y);
-        //Left side
-        if (coord0.x < f_radius) {
-            //Bottom left corner
-            if (coord0.y < f_radius) {
-                outColor = shapeWindow(tex, coord0, vec2(f_radius, f_radius), f_radius);
+    // All four corners and edges look the same, so mirror the position onto the nearest
+    // horizontal and vertical edge. d is the distance inside the frame from those edges,
+    // negative in the shadow outside of it.
+    bvec2 far_side = greaterThan(p, frame_size - p);
+    vec2 d = mix(p, frame_size - p, vec2(far_side));
 
-                //Inner outline
-                if(draw_inner_outline) {
-                    outColor = cornerOutline(outColor, true, coord0, f_radius-outer_outline_width, vec2(f_radius, f_radius), inner_outline_width, false);
-                }
-                //Outer outline
-                if(draw_outer_outline) {
-                    outColor = cornerOutline(outColor, false, coord0, f_radius, vec2(f_radius, f_radius), outer_outline_width, true);
-                }
-            //Top left corner
-            } else if (coord0.y > frame_size.y - f_radius) {
-                outColor = shapeWindow(tex, coord0, vec2(f_radius, frame_size.y - f_radius), f_radius);
+    // Whether the nearest vertical and horizontal edge have a shadow. Shadows can be lopsided,
+    // a side without one is handled like a window without a shadow: there is no shadow to
+    // continue into the rounded off area and nothing to draw the outer outline on.
+    vec4 shadow_extent = has_shadow ? vec4(origin, tex_size - frame_size - origin) : vec4(0.0); // left, bottom, right, top
+    // Less than half a pixel is rounding noise from scaling, not a shadow
+    bvec2 edge_shadow = greaterThan(mix(shadow_extent.xy, shadow_extent.zw, vec2(far_side)), vec2(0.5));
+    bool corner_shadow = all(edge_shadow);
 
-                //Inner outline
-                if(draw_inner_outline) {
-                    outColor = cornerOutline(outColor, true, coord0, f_radius-outer_outline_width, vec2(f_radius, frame_size.y - f_radius), inner_outline_width, false);
-                }
-                //Outer outline
-                if(draw_outer_outline) {
-                    outColor = cornerOutline(outColor, false, coord0, f_radius, vec2(f_radius, frame_size.y - f_radius), outer_outline_width, true);
-                }
-            //Center
-            } else {
-                outColor = tex;
+    // Point just outside the frame on the nearest edges, where the shadow is sampled
+    // to fill in the area cut off by the rounded corners
+    vec2 shadow_sample = mix(vec2(-shadow_sample_offset), frame_size + shadow_sample_offset, vec2(far_side));
+    vec2 shadow_sample_tex = (shadow_sample + origin) / tex_size;
 
-                //Outline
-                if(coord0.y > f_radius && coord0.y < frame_size.y - f_radius) {
-                    //Inner outline
-                    if(draw_inner_outline) {
-                        if(coord0.x >= outer_outline_width && coord0.x <= outer_outline_width+inner_outline_width) {
-                            outColor = mix(outColor, vec4(inner_outline_color.rgb,1.0), inner_outline_color.a);
-                        }
-                    }
-                    //Outer outline
-                    if(draw_outer_outline) {
-                        if(
-                            (coord0.x >= 0.0 && coord0.x <= outer_outline_width)
-                        ) {
-                            outColor = mix(outColor, vec4(outer_outline_color.rgb,1.0), outer_outline_color.a);
-                        }
-                    }
-                }
-            }
-        //Right side
-        } else if (coord0.x > frame_size.x - f_radius) {
-            //Bottom right corner
-            if (coord0.y < f_radius) {
-                outColor = shapeWindow(tex, coord0, vec2(frame_size.x - f_radius, f_radius), f_radius);
+    // Without a shadow both outlines are drawn inside the frame, with one the outer
+    // outline is drawn on the shadow just outside of it. Per edge, x for the vertical one.
+    vec2 inner_outline_start = mix(vec2(outer_outline_width), vec2(0.0), vec2(edge_shadow));
+    vec2 outer_outline_start = mix(vec2(0.0), vec2(-outer_outline_width), vec2(edge_shadow));
+    float corner_reach = max(shadow_sample_offset, outer_outline_width);
 
-                //Inner outline
-                if(draw_inner_outline) {
-                    outColor = cornerOutline(outColor, true, coord0, f_radius-outer_outline_width, vec2(frame_size.x - f_radius, f_radius), inner_outline_width, false);
-                }
-                //Outer outline
-                if(draw_outer_outline) {
-                    outColor = cornerOutline(outColor, false, coord0, f_radius, vec2(frame_size.x - f_radius, f_radius), outer_outline_width, true);
-                }
-            //Top right corner
-            } else if (coord0.y > frame_size.y - f_radius) {
-                outColor = shapeWindow(tex, coord0, vec2(frame_size.x - f_radius, frame_size.y - f_radius), f_radius);
+    bool near_vertical_edge = d.x > -corner_reach && d.x < radius;
+    bool near_horizontal_edge = d.y > -corner_reach && d.y < radius;
 
-                //Inner outline
-                if(draw_inner_outline) {
-                    outColor = cornerOutline(outColor, true, coord0, f_radius-outer_outline_width, vec2(frame_size.x - f_radius, frame_size.y - f_radius), inner_outline_width, false);
-                }
-                //Outer outline
-                if(draw_outer_outline) {
-                    outColor = cornerOutline(outColor, false, coord0, f_radius, vec2(frame_size.x - f_radius, frame_size.y - f_radius), outer_outline_width, true);
-                }
-            //Center
-            } else {
-                outColor = tex;
+    vec4 outColor = tex;
 
-                //Outline
-                if(coord0.y > f_radius && coord0.y < frame_size.y - f_radius) {
-                    //Inner outline
-                    if(draw_inner_outline) {
-                        if(coord0.x >= frame_size.x - inner_outline_width - outer_outline_width && coord0.x <= frame_size.x - outer_outline_width) {
-                            outColor = mix(outColor, vec4(inner_outline_color.rgb,1.0), inner_outline_color.a);
-                        }
-                    }
-                    //Outer outline
-                    if(draw_outer_outline) {
-                        if(
-                            (coord0.x >= frame_size.x - outer_outline_width && coord0.x <= frame_size.x )
-                        ) {
-                            outColor = mix(outColor, vec4(outer_outline_color.rgb,1.0), outer_outline_color.a);
-                        }
-                    }
-                }
-            }
-        //Center
+    if (near_vertical_edge && near_horizontal_edge) {
+        // Corner
+        vec2 center = vec2(radius);
+        if (corner_shadow) {
+            outColor = shapeShadowWindow(shadow_sample_tex, tex, d, center, radius);
         } else {
-            outColor = tex;
-
-            //Outline
-            if(coord0.x > f_radius && coord0.x < frame_size.x - f_radius) {
-                //Inner outline
-                if(draw_inner_outline) {
-                    if(
-                        (coord0.y >= frame_size.y - inner_outline_width - outer_outline_width && coord0.y <= frame_size.y - outer_outline_width )
-                        || (coord0.y >= outer_outline_width && coord0.y <= outer_outline_width + inner_outline_width)
-                    ) {
-                        outColor = mix(outColor, vec4(inner_outline_color.rgb,1.0), inner_outline_color.a);
-                    }
-                }
-                //Outer outline
-                if(draw_outer_outline) {
-                    if(
-                        (coord0.y >= frame_size.y - outer_outline_width  && coord0.y <= frame_size.y)
-                        || (coord0.y >= 0.0 && coord0.y <= outer_outline_width)
-                    ) {
-                        outColor = mix(outColor, vec4(outer_outline_color.rgb,1.0), outer_outline_color.a);
-                    }
-                }
-            }
+            outColor = shapeWindow(tex, d, center, radius);
         }
-    //Window with shadow
-    } else if(expanded_size != frame_size) {
-        coord0 = vec2(texcoord0.x*expanded_size.x, texcoord0.y*expanded_size.y);
-        //Left side
-        if (coord0.x > shadow_size.x - max(f_shadow_sample_offset, outer_outline_width) && coord0.x < f_radius + shadow_size.x) {
-            //Top left corner
-            if (coord0.y > frame_size.y + shadow_size.z - f_radius && coord0.y < frame_size.y + shadow_size.z + max(f_shadow_sample_offset, outer_outline_width)) {
-                start_x = (shadow_size.x - f_shadow_sample_offset)/expanded_size.x;
-                start_y = (shadow_size.z + frame_size.y + f_shadow_sample_offset)/expanded_size.y;
-                
-                outColor = shapeShadowWindow(vec2(start_x, start_y), tex, coord0, vec2(f_radius + shadow_size.x, frame_size.y + shadow_size.z - f_radius), f_radius);
 
-                //Inner outline
-                if(draw_inner_outline) {
-                    outColor = cornerOutline(outColor, true, coord0, f_radius, vec2(f_radius + shadow_size.x, frame_size.y + shadow_size.z - f_radius), inner_outline_width, false);
-                }
-                //Outer outline
-                if(draw_outer_outline) {
-                    outColor = cornerOutline(outColor, false, coord0, f_radius, vec2(f_radius + shadow_size.x, frame_size.y + shadow_size.z - f_radius), outer_outline_width, false);
-                }
-            //Bottom left corner
-            } else if (coord0.y > shadow_size.z - max(f_shadow_sample_offset, outer_outline_width) && coord0.y < f_radius + shadow_size.z) {
-                start_x = (shadow_size.x - f_shadow_sample_offset)/expanded_size.x;
-                start_y = (shadow_size.z - f_shadow_sample_offset)/expanded_size.y;
+        // A corner with a shadow on only one side has its outlines inside, like without a shadow
+        float corner_inner_start = corner_shadow ? 0.0 : outer_outline_width;
+        float corner_outer_start = corner_shadow ? -outer_outline_width : 0.0;
+        if (draw_inner_outline) {
+            outColor = cornerOutline(outColor, inner_outline_color, d, center, corner_inner_start, inner_outline_width);
+        }
+        if (draw_outer_outline) {
+            outColor = cornerOutline(outColor, outer_outline_color, d, center, corner_outer_start, outer_outline_width);
+        }
+    } else {
+        // Straight edges, only between the corners along them. Outlines wider than the corner
+        // radius reach past it, so a pixel can be near a vertical and a horizontal edge at once.
+        bool along_vertical_edge = d.y >= radius;
+        bool along_horizontal_edge = d.x >= radius;
 
-                outColor = shapeShadowWindow(vec2(start_x, start_y), tex, coord0, vec2(f_radius + shadow_size.x, shadow_size.z + f_radius), f_radius);
+        // Shadow padding left by the rounding, continue the shadow from just outside the frame
+        if (along_vertical_edge && edge_shadow.x && d.x > -shadow_sample_offset && d.x <= 0.0) {
+            outColor = texture(sampler, vec2(shadow_sample_tex.x, texcoord0.y));
+        } else if (along_horizontal_edge && edge_shadow.y && d.y > -shadow_sample_offset && d.y <= 0.0) {
+            outColor = texture(sampler, vec2(texcoord0.x, shadow_sample_tex.y));
+        }
 
-                //Inner outline
-                if(draw_inner_outline) {
-                    outColor = cornerOutline(outColor, true, coord0, f_radius, vec2(f_radius + shadow_size.x, shadow_size.z + f_radius), inner_outline_width, false);
-                }
-                //Outer outline
-                if(draw_outer_outline) {
-                    outColor = cornerOutline(outColor, false, coord0, f_radius, vec2(f_radius + shadow_size.x, shadow_size.z + f_radius), outer_outline_width, false);
-                }
-            //Center
-            } else {
-                outColor = tex;
-
-                //Outline and shadow
-                if(coord0.y > f_radius + shadow_size.z && coord0.y < shadow_size.z + frame_size.y - f_radius) {
-                    //Left shadow padding
-                    if(coord0.x > shadow_size.x - f_shadow_sample_offset && coord0.x <= shadow_size.x) {
-                        start_x = (shadow_size.x - f_shadow_sample_offset)/expanded_size.x;                        
-                        vec4 texShadowEdge = texture2D(sampler, vec2(start_x, texcoord0.y));
-                        outColor = texShadowEdge;
-                    }
-
-                    //Inner outline
-                    if(draw_inner_outline) {
-                        if(coord0.x >= shadow_size.x && coord0.x <= shadow_size.x+inner_outline_width) {
-                            outColor = mix(outColor, vec4(inner_outline_color.rgb,1.0), inner_outline_color.a);
-                        }
-                    }
-                    //Outer outline
-                    if(draw_outer_outline) {
-                        if(
-                            (coord0.x >= shadow_size.x - outer_outline_width && coord0.x <= shadow_size.x)
-                        ) {
-                            outColor = mix(outColor, vec4(outer_outline_color.rgb,1.0), outer_outline_color.a);
-                        }
-                    }
-                }
-            }
-        //Right side
-        } else if (coord0.x > shadow_size.x + frame_size.x - f_radius && coord0.x < shadow_size.x + frame_size.x + max(f_shadow_sample_offset, outer_outline_width)) {
-            //Top right corner
-            if (coord0.y > frame_size.y + shadow_size.z - f_radius && coord0.y < frame_size.y + shadow_size.z + max(f_shadow_sample_offset, outer_outline_width)) {
-                start_x = (shadow_size.x + frame_size.x + f_shadow_sample_offset)/expanded_size.x;
-                start_y = (shadow_size.z + frame_size.y + f_shadow_sample_offset)/expanded_size.y;
-
-                outColor = shapeShadowWindow(vec2(start_x, start_y), tex, coord0, vec2(shadow_size.x + frame_size.x - f_radius, frame_size.y + shadow_size.z - f_radius), f_radius);
-
-                //Inner outline
-                if(draw_inner_outline) {
-                    outColor = cornerOutline(outColor, true, coord0, f_radius, vec2(shadow_size.x + frame_size.x - f_radius, frame_size.y + shadow_size.z - f_radius), inner_outline_width, false);
-                }
-                //Outer outline
-                if(draw_outer_outline) {
-                    outColor = cornerOutline(outColor, false, coord0, f_radius, vec2(shadow_size.x + frame_size.x - f_radius, frame_size.y + shadow_size.z - f_radius), outer_outline_width, false);
-                }
-            //Bottom right corner
-            } else if (coord0.y > shadow_size.z - max(f_shadow_sample_offset, outer_outline_width) && coord0.y < f_radius + shadow_size.z) {
-                start_x = (shadow_size.x + frame_size.x + f_shadow_sample_offset)/expanded_size.x;
-                start_y = (shadow_size.z - f_shadow_sample_offset)/expanded_size.y;
-
-                outColor = shapeShadowWindow(vec2(start_x, start_y), tex, coord0, vec2(shadow_size.x + frame_size.x - f_radius, shadow_size.z + f_radius), f_radius);
-
-                //Inner outline
-                if(draw_inner_outline) {
-                    outColor = cornerOutline(outColor, true, coord0, f_radius, vec2(shadow_size.x + frame_size.x - f_radius, shadow_size.z + f_radius), inner_outline_width, false);
-                }
-                //Outer outline
-                if(draw_outer_outline) {
-                    outColor = cornerOutline(outColor, false, coord0, f_radius, vec2(shadow_size.x + frame_size.x - f_radius, shadow_size.z + f_radius), outer_outline_width, false);
-                }
-            //Center
-            } else {
-                outColor = tex;
-
-                //Outline and shadow
-                if(coord0.y > f_radius + shadow_size.z && coord0.y < shadow_size.z + frame_size.y - f_radius) {
-                    //Right shadow padding
-                    if(coord0.x >= shadow_size.x + frame_size.x && coord0.x < shadow_size.x + frame_size.x + f_shadow_sample_offset) {
-                        start_x = (shadow_size.x + frame_size.x + f_shadow_sample_offset)/expanded_size.x;
-                        vec4 texShadowEdge = texture2D(sampler, vec2(start_x, texcoord0.y));
-                        outColor = texShadowEdge;
-                    }
-
-                    //Inner outline
-                    if(draw_inner_outline) {
-                        if(coord0.x >= frame_size.x + shadow_size.x - inner_outline_width && coord0.x <= frame_size.x + shadow_size.x) {
-                            outColor = mix(outColor, vec4(inner_outline_color.rgb,1.0), inner_outline_color.a);
-                        }
-                    }
-                    //Outer outline
-                    if(draw_outer_outline) {
-                        if(
-                            (coord0.x >= frame_size.x + shadow_size.x && coord0.x <= frame_size.x + shadow_size.x + outer_outline_width)
-                        ) {
-                            outColor = mix(outColor, vec4(outer_outline_color.rgb,1.0), outer_outline_color.a);
-                        }
-                    }
-                }
-            }
-        //Center
-        } else {
-            outColor = tex;
-
-            //Outline and shadow
-            if(coord0.x > f_radius + shadow_size.x && coord0.x < shadow_size.x + frame_size.x - f_radius) {
-                //Top shadow padding
-                if(coord0.y >= frame_size.y + shadow_size.z && coord0.y < frame_size.y + shadow_size.z + f_shadow_sample_offset) {
-                    start_y = (shadow_size.z + frame_size.y + f_shadow_sample_offset)/expanded_size.y;
-                    vec4 texShadowEdge = texture2D(sampler, vec2(texcoord0.x, start_y));
-                    outColor = texShadowEdge;
-                //Bottom shadow padding
-                } else if(coord0.y <= shadow_size.z && coord0.y > shadow_size.z - f_shadow_sample_offset) {
-                    start_y = (shadow_size.z - f_shadow_sample_offset)/expanded_size.y;
-                    vec4 texShadowEdge = texture2D(sampler, vec2(texcoord0.x, start_y));
-                    outColor = texShadowEdge;
-                }
-
-                //Inner outline
-                if(draw_inner_outline) {
-                    if(
-                        (coord0.y >= frame_size.y + shadow_size.z - inner_outline_width && coord0.y <= frame_size.y + shadow_size.z)
-                        || (coord0.y >= shadow_size.z && coord0.y <= shadow_size.z + inner_outline_width)
-                    ) {
-                        outColor = mix(outColor, vec4(inner_outline_color.rgb,1.0), inner_outline_color.a);
-                    }
-                }
-                //Outer outline
-                if(draw_outer_outline) {
-                    if(
-                        (coord0.y >= frame_size.y + shadow_size.z && coord0.y <= frame_size.y + shadow_size.z + outer_outline_width)
-                        || (coord0.y >= shadow_size.z - outer_outline_width && coord0.y <= shadow_size.z)
-                    ) {
-                        outColor = mix(outColor, vec4(outer_outline_color.rgb,1.0), outer_outline_color.a);
-                    }
-                }
-            }
+        if (draw_inner_outline
+            && ((along_vertical_edge && inBand(d.x, inner_outline_start.x, inner_outline_width))
+                || (along_horizontal_edge && inBand(d.y, inner_outline_start.y, inner_outline_width)))) {
+            outColor = mix(outColor, vec4(inner_outline_color.rgb, 1.0), inner_outline_color.a);
+        }
+        if (draw_outer_outline
+            && ((along_vertical_edge && inBand(d.x, outer_outline_start.x, outer_outline_width))
+                || (along_horizontal_edge && inBand(d.y, outer_outline_start.y, outer_outline_width)))) {
+            outColor = mix(outColor, vec4(outer_outline_color.rgb, 1.0), outer_outline_color.a);
         }
     }
 
+    // Same output steps as KWin's own window shader
     outColor = sourceEncodingToNitsInDestinationColorspace(outColor);
-
-    //Support opacity
-    if (saturation != 1.0) {
-        vec3 desaturated = outColor.rgb * vec3( 0.30, 0.59, 0.11 );
-        desaturated = vec3( dot( desaturated, outColor.rgb ));
-        outColor.rgb = outColor.rgb * vec3( saturation ) + desaturated * vec3( 1.0 - saturation );
-    }
+    outColor = adjustSaturation(outColor);
     outColor *= modulation;
-
-    //Output result
-    gl_FragColor = nitsToDestinationEncoding(outColor);
-    //gl_FragColor = vec4(tex.r, tex.g, 1.0, tex.a);
+    outColor.rgb = doTonemapping(outColor.rgb);
+    fragColor = nitsToDestinationEncoding(outColor);
 }

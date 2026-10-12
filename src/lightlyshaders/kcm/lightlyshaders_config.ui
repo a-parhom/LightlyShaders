@@ -19,7 +19,7 @@
      <item>
       <layout class="QHBoxLayout" name="horizontalLayout">
        <item>
-        <widget class="QLabel" name="label">
+        <widget class="QLabel" name="cornerSizeLabel">
          <property name="text">
           <string>Corner size (radius):</string>
          </property>
@@ -37,7 +37,7 @@
           <number>64</number>
          </property>
          <property name="value">
-          <number>6</number>
+          <number>5</number>
          </property>
         </widget>
        </item>
@@ -46,7 +46,7 @@
      <item>
       <layout class="QHBoxLayout" name="horizontalLayout_2">
        <item>
-        <widget class="QLabel" name="label_2">
+        <widget class="QLabel" name="shadowOffsetLabel">
          <property name="text">
           <string>Shadow offset:</string>
          </property>
@@ -96,7 +96,7 @@
         <number>7</number>
        </property>
        <item>
-        <widget class="QLabel" name="label_3">
+        <widget class="QLabel" name="innerOutlineWidthLabel">
          <property name="text">
           <string>Inner outline width:</string>
          </property>
@@ -127,7 +127,7 @@
           <bool>true</bool>
          </property>
       </widget>
-     </item> 
+     </item>
 
      <item row="4" column="7">
       <widget class="KColorButton" name="kcfg_OuterOutlineColor">
@@ -143,7 +143,7 @@
         <number>7</number>
        </property>
        <item>
-        <widget class="QLabel" name="label_4">
+        <widget class="QLabel" name="outerOutlineWidthLabel">
          <property name="text">
           <string>Outer outline width:</string>
          </property>
@@ -166,6 +166,46 @@
      </item>
 
      <item>
+      <widget class="QCheckBox" name="kcfg_InactiveOutlines">
+       <property name="text">
+        <string>Different outline colors for inactive windows</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <layout class="QHBoxLayout" name="inactiveOutlinesLayout">
+       <item>
+        <widget class="QLabel" name="inactiveInnerOutlineLabel">
+         <property name="text">
+          <string>Inactive inner outline:</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="KColorButton" name="kcfg_InactiveInnerOutlineColor">
+         <property name="alphaChannelEnabled">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="QLabel" name="inactiveOuterOutlineLabel">
+         <property name="text">
+          <string>Inactive outer outline:</string>
+         </property>
+        </widget>
+       </item>
+       <item>
+        <widget class="KColorButton" name="kcfg_InactiveOuterOutlineColor">
+         <property name="alphaChannelEnabled">
+          <bool>true</bool>
+         </property>
+        </widget>
+       </item>
+      </layout>
+     </item>
+
+     <item>
       <widget class="QCheckBox" name="kcfg_DisabledForMaximized">
        <property name="text">
         <string>Disable for maximized windows</string>
@@ -174,7 +214,14 @@
           <bool>false</bool>
          </property>
       </widget>
-     </item> 
+     </item>
+     <item>
+      <widget class="QCheckBox" name="kcfg_DisabledForTiled">
+       <property name="text">
+        <string>Disable for tiled windows</string>
+       </property>
+      </widget>
+     </item>
      <item>
       <widget class="QComboBox" name="kcfg_CornersType">
          <item>
@@ -186,16 +233,16 @@
           <property name="text">
            <string>Squircled</string>
           </property>
-         </item>        
+         </item>
       </widget>
-     </item> 
+     </item>
      <item>
       <widget class="QLabel" name="squircleRatioLabel">
        <property name="text">
         <string>Squircle ratio</string>
        </property>
       </widget>
-     </item> 
+     </item>
      <item>
       <widget class="QSlider" name="kcfg_SquircleRatio">
        <property name="minimum">
@@ -220,7 +267,27 @@
         <number>1</number>
        </property>
       </widget>
-     </item>    
+     </item>
+     <item>
+      <widget class="QLabel" name="excludedWindowClassesLabel">
+       <property name="text">
+        <string>Excluded window classes (comma separated):</string>
+       </property>
+       <property name="buddy">
+        <cstring>kcfg_ExcludedWindowClasses</cstring>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QLineEdit" name="kcfg_ExcludedWindowClasses">
+       <property name="placeholderText">
+        <string>e.g. yakuake, org.kde.kate</string>
+       </property>
+       <property name="toolTip">
+        <string>Windows whose class contains one of these names, ignoring case, keep their square corners</string>
+       </property>
+      </widget>
+     </item>
      <item>
       <spacer name="verticalSpacer">
        <property name="orientation">

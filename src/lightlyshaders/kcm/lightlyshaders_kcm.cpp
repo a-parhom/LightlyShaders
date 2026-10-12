@@ -1,10 +1,6 @@
-#include "../lightlyshaders.h"
 #include "lightlyshaders_kcm.h"
 #include "kwineffects_interface.h"
-
-#include <QDBusConnection>
-#include <QDBusMessage>
-#include <QDBusArgument>
+#include "lightlyshaders_config.h"
 
 #include <KPluginFactory>
 
@@ -13,59 +9,49 @@ namespace KWin
 
 K_PLUGIN_CLASS(LightlyShadersKCM)
 
-LightlyShadersKCM::LightlyShadersKCM(QObject* parent, const KPluginMetaData &data)
+LightlyShadersKCM::LightlyShadersKCM(QObject *parent, const KPluginMetaData &data)
     : KCModule(parent, data)
 {
     ui.setupUi(widget());
     addConfig(LightlyShadersConfig::self(), widget());
 
-    if(ui.kcfg_CornersType->currentIndex() == LSHelper::SquircledCorners) {
-        ui.kcfg_SquircleRatio->setEnabled(true);
-    } else {
-        ui.kcfg_SquircleRatio->setEnabled(false);
-    }
-
-    connect( ui.kcfg_CornersType, SIGNAL(currentIndexChanged(int)), SLOT(updateChanged()) );
-
+    connect(ui.kcfg_CornersType, &QComboBox::currentIndexChanged, this, &LightlyShadersKCM::updateEnabledWidgets);
+    connect(ui.kcfg_InnerOutline, &QCheckBox::toggled, this, &LightlyShadersKCM::updateEnabledWidgets);
+    connect(ui.kcfg_OuterOutline, &QCheckBox::toggled, this, &LightlyShadersKCM::updateEnabledWidgets);
+    connect(ui.kcfg_InactiveOutlines, &QCheckBox::toggled, this, &LightlyShadersKCM::updateEnabledWidgets);
+    updateEnabledWidgets();
 }
 
-void
-LightlyShadersKCM::load()
+void LightlyShadersKCM::save()
 {
-    KCModule::load();
-    LightlyShadersConfig::self()->load();
-}
-
-void
-LightlyShadersKCM::save()
-{
-    LightlyShadersConfig::self()->save();
     KCModule::save();
 
-    OrgKdeKwinEffectsInterface interface(QStringLiteral("org.kde.KWin"),
-                                         QStringLiteral("/Effects"),
-                                         QDBusConnection::sessionBus());
+    OrgKdeKwinEffectsInterface interface(QStringLiteral("org.kde.KWin"), QStringLiteral("/Effects"), QDBusConnection::sessionBus());
     interface.reconfigureEffect(QStringLiteral("kwin_effect_lightlyshaders"));
     interface.reconfigureEffect(QStringLiteral("lightlyshaders_blur"));
 }
 
-void
-LightlyShadersKCM::defaults()
+void LightlyShadersKCM::updateEnabledWidgets()
 {
-    KCModule::defaults();
-    LightlyShadersConfig::self()->setDefaults();
-}
+    const bool squircle = ui.kcfg_CornersType->currentIndex() == LightlyShadersConfig::EnumCornersType::SquircledCorners;
+    ui.squircleRatioLabel->setEnabled(squircle);
+    ui.kcfg_SquircleRatio->setEnabled(squircle);
 
-void
-LightlyShadersKCM::updateChanged()
-{
+    const bool inner = ui.kcfg_InnerOutline->isChecked();
+    ui.kcfg_InnerOutlineColor->setEnabled(inner);
+    ui.innerOutlineWidthLabel->setEnabled(inner);
+    ui.kcfg_InnerOutlineWidth->setEnabled(inner);
 
-    if(ui.kcfg_CornersType->currentIndex() == LSHelper::SquircledCorners) {
-        ui.kcfg_SquircleRatio->setEnabled(true);
-    } else {
-        ui.kcfg_SquircleRatio->setEnabled(false);
-    }
+    const bool outer = ui.kcfg_OuterOutline->isChecked();
+    ui.kcfg_OuterOutlineColor->setEnabled(outer);
+    ui.outerOutlineWidthLabel->setEnabled(outer);
+    ui.kcfg_OuterOutlineWidth->setEnabled(outer);
 
+    const bool inactive = ui.kcfg_InactiveOutlines->isChecked();
+    ui.inactiveInnerOutlineLabel->setEnabled(inactive && inner);
+    ui.kcfg_InactiveInnerOutlineColor->setEnabled(inactive && inner);
+    ui.inactiveOuterOutlineLabel->setEnabled(inactive && outer);
+    ui.kcfg_InactiveOuterOutlineColor->setEnabled(inactive && outer);
 }
 
 } // namespace KWin
