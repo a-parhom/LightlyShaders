@@ -182,14 +182,7 @@ LightlyShadersEffect::reconfigure(ReconfigureFlags flags)
     const auto screens = effects->screens();
     for(LogicalOutput *s : screens)
     {
-        if (effects->waylandDisplay() == nullptr) {
-            s = nullptr;
-        }
         setRoundness(m_roundness, s);
-
-        if (effects->waylandDisplay() == nullptr) {
-            break;
-        }
     }
 
     effects->addRepaintFull();
