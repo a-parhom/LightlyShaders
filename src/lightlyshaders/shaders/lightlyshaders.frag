@@ -1,4 +1,4 @@
-#version 110
+#version 140
 
 uniform sampler2D sampler;
 
@@ -21,7 +21,8 @@ uniform mat4 modelViewProjectionMatrix;
 uniform vec4 modulation;
 uniform float saturation;
 
-varying vec2 texcoord0;
+in vec2 texcoord0;
+out vec4 fragColor;
 
 #include "colormanagement.glsl"
 
@@ -72,9 +73,9 @@ vec4 shapeShadowWindow(vec2 start, vec4 tex, vec2 p, vec2 center, float clip_rad
     vec2 ShadowHorCoord = vec2(texcoord0.x, start.y);
     vec2 ShadowVerCoord = vec2(start.x, texcoord0.y);
 
-    vec4 texShadowHorCur = texture2D(sampler, ShadowHorCoord);
-    vec4 texShadowVerCur = texture2D(sampler, ShadowVerCoord);
-    vec4 texShadow0 = texture2D(sampler, start);
+    vec4 texShadowHorCur = texture(sampler, ShadowHorCoord);
+    vec4 texShadowVerCur = texture(sampler, ShadowVerCoord);
+    vec4 texShadow0 = texture(sampler, start);
 
     vec4 texShadow = texShadowHorCur + (texShadowVerCur - texShadow0);
 
@@ -138,7 +139,7 @@ vec4 cornerOutline(vec4 outColor, bool inner, vec2 coord0, float radius, vec2 ce
 
 void main()
 {
-    vec4 tex = texture2D(sampler, texcoord0);
+    vec4 tex = texture(sampler, texcoord0);
     vec2 coord0;
     vec4 outColor;
     float start_x;
@@ -316,7 +317,7 @@ void main()
                     //Left shadow padding
                     if(coord0.x > shadow_size.x - f_shadow_sample_offset && coord0.x <= shadow_size.x) {
                         start_x = (shadow_size.x - f_shadow_sample_offset)/expanded_size.x;                        
-                        vec4 texShadowEdge = texture2D(sampler, vec2(start_x, texcoord0.y));
+                        vec4 texShadowEdge = texture(sampler, vec2(start_x, texcoord0.y));
                         outColor = texShadowEdge;
                     }
 
@@ -377,7 +378,7 @@ void main()
                     //Right shadow padding
                     if(coord0.x >= shadow_size.x + frame_size.x && coord0.x < shadow_size.x + frame_size.x + f_shadow_sample_offset) {
                         start_x = (shadow_size.x + frame_size.x + f_shadow_sample_offset)/expanded_size.x;
-                        vec4 texShadowEdge = texture2D(sampler, vec2(start_x, texcoord0.y));
+                        vec4 texShadowEdge = texture(sampler, vec2(start_x, texcoord0.y));
                         outColor = texShadowEdge;
                     }
 
@@ -406,12 +407,12 @@ void main()
                 //Top shadow padding
                 if(coord0.y >= frame_size.y + shadow_size.z && coord0.y < frame_size.y + shadow_size.z + f_shadow_sample_offset) {
                     start_y = (shadow_size.z + frame_size.y + f_shadow_sample_offset)/expanded_size.y;
-                    vec4 texShadowEdge = texture2D(sampler, vec2(texcoord0.x, start_y));
+                    vec4 texShadowEdge = texture(sampler, vec2(texcoord0.x, start_y));
                     outColor = texShadowEdge;
                 //Bottom shadow padding
                 } else if(coord0.y <= shadow_size.z && coord0.y > shadow_size.z - f_shadow_sample_offset) {
                     start_y = (shadow_size.z - f_shadow_sample_offset)/expanded_size.y;
-                    vec4 texShadowEdge = texture2D(sampler, vec2(texcoord0.x, start_y));
+                    vec4 texShadowEdge = texture(sampler, vec2(texcoord0.x, start_y));
                     outColor = texShadowEdge;
                 }
 
@@ -448,6 +449,6 @@ void main()
     outColor *= modulation;
 
     //Output result
-    gl_FragColor = nitsToDestinationEncoding(outColor);
-    //gl_FragColor = vec4(tex.r, tex.g, 1.0, tex.a);
+    fragColor = nitsToDestinationEncoding(outColor);
+    //fragColor = vec4(tex.r, tex.g, 1.0, tex.a);
 }

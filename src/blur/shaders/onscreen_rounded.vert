@@ -6,9 +6,11 @@ in vec2 position;
 in vec2 texcoord;
 
 out vec2 uv;
+out vec2 vertex;
 
 void main(void)
 {
     gl_Position = modelViewProjectionMatrix * vec4(position, 0.0, 1.0);
     uv = texcoord;
+    vertex = position;
 }

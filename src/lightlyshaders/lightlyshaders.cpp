@@ -30,6 +30,7 @@
 #include <opengl/eglcontext.h>
 #include <effect/effect.h>
 #include <core/renderviewport.h>
+#include <scene/scene.h>
 #include <QMatrix4x4>
 #include <KConfigGroup>
 #include <QRegularExpression>
@@ -65,7 +66,7 @@ LightlyShadersEffect::LightlyShadersEffect() : OffscreenEffect()
         return;
     }
 
-    if (m_shader->isValid())
+    if (m_shader)
     {
         const auto stackingOrder = effects->stackingOrder();
         for (EffectWindow *window : stackingOrder) {
@@ -108,7 +109,7 @@ LightlyShadersEffect::windowAdded(EffectWindow *w)
     connect(w, &EffectWindow::windowFullScreenChanged,
             this, &LightlyShadersEffect::windowFullScreenChanged);
 
-    QRectF maximized_area = effects->clientArea(MaximizeArea, w);
+    RectF maximized_area = effects->clientArea(MaximizeArea, w);
     if (maximized_area == w->frameGeometry() && m_disabledForMaximized)
         m_windows[w].skipEffect = true;
 
@@ -139,7 +140,7 @@ LightlyShadersEffect::windowMaximizedStateChanged(EffectWindow *w, bool horizont
 }
 
 void
-LightlyShadersEffect::setRoundness(const int r, Output *s)
+LightlyShadersEffect::setRoundness(const int r, LogicalOutput*s)
 {
     m_size = r;
     m_screens[s].sizeScaled = float(r)*m_screens[s].scale;
@@ -179,23 +180,16 @@ LightlyShadersEffect::reconfigure(ReconfigureFlags flags)
     }
 
     const auto screens = effects->screens();
-    for(Output *s : screens)
+    for(LogicalOutput *s : screens)
     {
-        if (effects->waylandDisplay() == nullptr) {
-            s = nullptr;
-        }
         setRoundness(m_roundness, s);
-
-        if (effects->waylandDisplay() == nullptr) {
-            break;
-        }
     }
 
     effects->addRepaintFull();
 }
 
-void
-LightlyShadersEffect::paintScreen(const RenderTarget &renderTarget, const RenderViewport &viewport, int mask, const QRegion &region, Output *s)
+bool
+LightlyShadersEffect::paintScreen(const RenderTarget &renderTarget, const RenderViewport &viewport, int mask, const Region &deviceRegion, LogicalOutput *s)
 {
     bool set_roundness = false;
 
@@ -216,54 +210,27 @@ LightlyShadersEffect::paintScreen(const RenderTarget &renderTarget, const Render
         m_helper->reconfigure();
     }
 
-    effects->paintScreen(renderTarget, viewport, mask, region, s);
+    return effects->paintScreen(renderTarget, viewport, mask, deviceRegion, s);
 }
 
 void
-LightlyShadersEffect::prePaintWindow(EffectWindow *w, WindowPrePaintData &data, std::chrono::milliseconds time)
+LightlyShadersEffect::prePaintWindow(RenderView *view, EffectWindow *w, WindowPrePaintData &data)
 {
     if (!isValidWindow(w) )
     {
-        effects->prePaintWindow(w, data, time);
+        effects->prePaintWindow(view, w, data);
         return;
     }
 
-    Output *s = w->screen();
-    if (effects->waylandDisplay() == nullptr) {
-        s = nullptr;
-    }
+    data.setTranslucent();
 
-    const QRectF geo(w->frameGeometry());
-    for (int corner = 0; corner < LSHelper::NTex; ++corner)
-    {
-        QRegion reg = QRegion(scale(m_helper->m_maskRegions[corner]->boundingRect(), m_screens[s].scale).toRect());
-        switch(corner) {
-            case LSHelper::TopLeft:
-                reg.translate(geo.x()-m_shadowOffset, geo.y()-m_shadowOffset);
-                break;
-            case LSHelper::TopRight:
-                reg.translate(geo.x() + geo.width() - m_size, geo.y()-m_shadowOffset);
-                break;
-            case LSHelper::BottomRight:
-                reg.translate(geo.x() + geo.width() - m_size-1, geo.y()+geo.height()-m_size-1);
-                break;
-            case LSHelper::BottomLeft:
-                reg.translate(geo.x()-m_shadowOffset+1, geo.y()+geo.height()-m_size-1);
-                break;
-            default:
-                break;
-        }
-
-        data.opaque -= reg;
-    }
-
-    effects->prePaintWindow(w, data, time);
+    effects->prePaintWindow(view, w, data);
 }
 
 bool
 LightlyShadersEffect::isValidWindow(EffectWindow *w)
 {
-    if (!m_shader->isValid()
+    if (!m_shader
             || !m_windows[w].isManaged
             || m_windows[w].skipEffect
         )
@@ -273,28 +240,23 @@ LightlyShadersEffect::isValidWindow(EffectWindow *w)
     return true;
 }
 
-void
-LightlyShadersEffect::drawWindow(const RenderTarget &renderTarget, const RenderViewport &viewport, EffectWindow *w, int mask, const QRegion &region, WindowPaintData &data)
-{    
-    QRectF screen = viewport.renderRect().toRect();
+bool
+LightlyShadersEffect::drawWindow(const RenderTarget &renderTarget, const RenderViewport &viewport, EffectWindow *w, int mask, const Region &region, WindowPaintData &data)
+{
+    RectF screen = viewport.renderRect().toRect();
 
     if (!isValidWindow(w) || (!screen.intersects(w->frameGeometry()) && !(mask & PAINT_WINDOW_TRANSFORMED)) )
     {
-        effects->drawWindow(renderTarget, viewport, w, mask, region, data);
-        return;
+        return effects->drawWindow(renderTarget, viewport, w, mask, region, data);
     }
 
-    Output *s = w->screen();
-    if (effects->waylandDisplay() == nullptr) {
-        s = nullptr;
-    }
+    RectF geo(w->frameGeometry());
+    RectF exp_geo(w->expandedGeometry());
+    RectF contents_geo(w->contentsRect());
 
-    QRectF geo(w->frameGeometry());
-    QRectF exp_geo(w->expandedGeometry());
-    QRectF contents_geo(w->contentsRect());
-
-    const QRectF geo_scaled = scale(geo, m_screens[s].scale);
-    const QRectF exp_geo_scaled = scale(exp_geo, m_screens[s].scale);
+    const qreal scaleFactor = viewport.scale();
+    const RectF geo_scaled = scale(geo, scaleFactor);
+    const RectF exp_geo_scaled = scale(exp_geo, scaleFactor);
 
     //Draw rounded corners with shadows
     const int frameSizeLocation = m_shader->uniformLocation("frame_size");
@@ -316,13 +278,13 @@ LightlyShadersEffect::drawWindow(const RenderTarget &renderTarget, const RenderV
     //qCWarning(LIGHTLYSHADERS) << geo_scaled.width() << geo_scaled.height();
     m_shader->setUniform(frameSizeLocation, QVector2D(geo_scaled.width(), geo_scaled.height()));
     m_shader->setUniform(expandedSizeLocation, QVector2D(exp_geo_scaled.width(), exp_geo_scaled.height()));
-    m_shader->setUniform(shadowSizeLocation, QVector3D(geo_scaled.x() - exp_geo_scaled.x(), geo_scaled.y()-exp_geo_scaled.y(), exp_geo_scaled.height() - geo_scaled.height() - geo_scaled.y() + exp_geo_scaled.y() ));
-    m_shader->setUniform(radiusLocation, m_screens[s].sizeScaled);
-    m_shader->setUniform(shadowOffsetLocation, float(m_shadowOffset*m_screens[s].scale));
+    m_shader->setUniform(shadowSizeLocation, QVector3D(geo_scaled.x() - exp_geo_scaled.x(), geo_scaled.y()-exp_geo_scaled.y(), geo_scaled.y() - exp_geo_scaled.y() ));
+    m_shader->setUniform(radiusLocation, float(m_size * scaleFactor));
+    m_shader->setUniform(shadowOffsetLocation, float(m_shadowOffset * scaleFactor));
     m_shader->setUniform(innerOutlineColorLocation, QVector4D(m_innerOutlineColor.red()/255.0,m_innerOutlineColor.green()/255.0,m_innerOutlineColor.blue()/255.0,m_innerOutlineColor.alpha()/255.0));
     m_shader->setUniform(outerOutlineColorLocation, QVector4D(m_outerOutlineColor.red()/255.0,m_outerOutlineColor.green()/255.0,m_outerOutlineColor.blue()/255.0,m_outerOutlineColor.alpha()/255.0));
-    m_shader->setUniform(innerOutlineWidthLocation, float(m_innerOutlineWidth*m_screens[s].scale));
-    m_shader->setUniform(outerOutlineWidthLocation, float(m_outerOutlineWidth*m_screens[s].scale));
+    m_shader->setUniform(innerOutlineWidthLocation, float(m_innerOutlineWidth * scaleFactor));
+    m_shader->setUniform(outerOutlineWidthLocation, float(m_outerOutlineWidth * scaleFactor));
     m_shader->setUniform(drawInnerOutlineLocation, m_innerOutline);
     m_shader->setUniform(drawOuterOutlineLocation, m_outerOutline);
     m_shader->setUniform(squircleRatioLocation, m_squircleRatio);
@@ -330,15 +292,17 @@ LightlyShadersEffect::drawWindow(const RenderTarget &renderTarget, const RenderV
 
     glActiveTexture(GL_TEXTURE0);
 
-    OffscreenEffect::drawWindow(renderTarget, viewport, w, mask, region, data);
+    const bool ret = OffscreenEffect::drawWindow(renderTarget, viewport, w, mask, region, data);
 
     sm->popShader();
+
+    return ret;
 }
 
-QRectF
-LightlyShadersEffect::scale(const QRectF rect, qreal scaleFactor)
+RectF
+LightlyShadersEffect::scale(const RectF rect, qreal scaleFactor)
 {
-    return QRectF(
+    return RectF(
         rect.x()*scaleFactor,
         rect.y()*scaleFactor,
         rect.width()*scaleFactor,

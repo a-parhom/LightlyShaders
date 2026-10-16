@@ -11,6 +11,10 @@ kconfig_add_kcfg_files(lightlyshaders_blur_SOURCES
 )
 
 add_library(lightlyshaders_blur MODULE ${lightlyshaders_blur_SOURCES})
+set_property(TARGET lightlyshaders_blur APPEND PROPERTY
+    AUTOMOC_MACRO_NAMES KWIN_EFFECT_FACTORY_SUPPORTED_ENABLED
+)
+
 target_link_libraries(lightlyshaders_blur PRIVATE
     KWin::kwin
 

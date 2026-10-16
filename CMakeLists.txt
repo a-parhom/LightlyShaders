@@ -4,8 +4,8 @@ project(lightlyshaders)
 set(PROJECT_VERSION "3.0.0")
 set(PROJECT_VERSION_MAJOR 0)
 
-set(KF_MIN_VERSION "5.240.0")
-set(QT_MIN_VERSION "6.6.0")
+set(KF_MIN_VERSION "6.30.0")
+set(QT_MIN_VERSION "6.11.0")
 set(QT_MAJOR_VERSION 6)
 
 set(CMAKE_CXX_STANDARD 20)
@@ -28,6 +28,7 @@ include(KDECompilerSettings NO_POLICY_SCOPE)
 find_package(Qt6 ${QT_MIN_VERSION} CONFIG REQUIRED COMPONENTS
     Gui
     Core
+    CorePrivate
     DBus
     UiTools
     Widgets
@@ -59,7 +60,6 @@ find_package(KF6 ${KF_MIN_VERSION} REQUIRED COMPONENTS
 
 find_package(epoxy REQUIRED)
 
-find_package(X11 REQUIRED)
 find_package(XCB REQUIRED COMPONENTS XCB)
 
 find_package(KWin REQUIRED COMPONENTS
