@@ -285,7 +285,7 @@ LightlyShadersEffect::drawWindow(const RenderTarget &renderTarget, const RenderV
     //qCWarning(LIGHTLYSHADERS) << geo_scaled.width() << geo_scaled.height();
     m_shader->setUniform(frameSizeLocation, QVector2D(geo_scaled.width(), geo_scaled.height()));
     m_shader->setUniform(expandedSizeLocation, QVector2D(exp_geo_scaled.width(), exp_geo_scaled.height()));
-    m_shader->setUniform(shadowSizeLocation, QVector3D(geo_scaled.x() - exp_geo_scaled.x(), geo_scaled.y()-exp_geo_scaled.y(), exp_geo_scaled.height() - geo_scaled.height() - geo_scaled.y() + exp_geo_scaled.y() ));
+    m_shader->setUniform(shadowSizeLocation, QVector3D(geo_scaled.x() - exp_geo_scaled.x(), geo_scaled.y()-exp_geo_scaled.y(), geo_scaled.y() - exp_geo_scaled.y() ));
     m_shader->setUniform(radiusLocation, float(m_size * scaleFactor));
     m_shader->setUniform(shadowOffsetLocation, float(m_shadowOffset * scaleFactor));
     m_shader->setUniform(innerOutlineColorLocation, QVector4D(m_innerOutlineColor.red()/255.0,m_innerOutlineColor.green()/255.0,m_innerOutlineColor.blue()/255.0,m_innerOutlineColor.alpha()/255.0));
