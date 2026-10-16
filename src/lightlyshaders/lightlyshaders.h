@@ -42,9 +42,9 @@ public:
     void setRoundness(const int r, LogicalOutput *s);
 
     void reconfigure(ReconfigureFlags flags) override;
-    void paintScreen(const RenderTarget &renderTarget, const RenderViewport &viewport, int mask, const Region &deviceRegion, LogicalOutput *s) override;
+    bool paintScreen(const RenderTarget &renderTarget, const RenderViewport &viewport, int mask, const Region &deviceRegion, LogicalOutput *s) override;
     void prePaintWindow(RenderView *view, EffectWindow* w, WindowPrePaintData& data) override;
-    void drawWindow(const RenderTarget &renderTarget, const RenderViewport &viewport, EffectWindow* w, int mask, const Region& deviceRegion, WindowPaintData& data) override;
+    bool drawWindow(const RenderTarget &renderTarget, const RenderViewport &viewport, EffectWindow* w, int mask, const Region& deviceRegion, WindowPaintData& data) override;
     virtual int requestedEffectChainPosition() const override { return 99; }
 
 protected Q_SLOTS:

@@ -4,8 +4,8 @@ project(lightlyshaders)
 set(PROJECT_VERSION "3.0.0")
 set(PROJECT_VERSION_MAJOR 0)
 
-set(KF_MIN_VERSION "6.26.0")
-set(QT_MIN_VERSION "6.10.0")
+set(KF_MIN_VERSION "6.30.0")
+set(QT_MIN_VERSION "6.11.0")
 set(QT_MAJOR_VERSION 6)
 
 set(CMAKE_CXX_STANDARD 20)

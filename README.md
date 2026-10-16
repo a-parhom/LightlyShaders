@@ -16,7 +16,7 @@
 
 # Dependencies:
  
-Plasma >= 6.7.
+Plasma >= 6.8.
  
 You will need qt6, kf6 and kwin development packages.
 

@@ -489,8 +489,10 @@ RegionF BlurEffect::blurRegion(EffectWindow *w) const
                 // An empty region means that the blur effect should be enabled
                 // for the whole window.
                 region = w->contentsRect();
-            } else {
+            } else if (w->decoration()) {
                 region = content->translated(w->contentsRect().topLeft()) & w->contentsRect();
+            } else {
+                region = *content & w->contentsRect();
             }
             if (frame.has_value()) {
                 region += frame.value();
@@ -533,12 +535,12 @@ bool BlurEffect::shouldBlur(const EffectWindow *w, int mask, const WindowPaintDa
     return true;
 }
 
-void BlurEffect::drawWindow(const RenderTarget &renderTarget, const RenderViewport &viewport, EffectWindow *w, int mask, const Region &deviceRegion, WindowPaintData &data)
+bool BlurEffect::drawWindow(const RenderTarget &renderTarget, const RenderViewport &viewport, EffectWindow *w, int mask, const Region &deviceRegion, WindowPaintData &data)
 {
     blur(renderTarget, viewport, w, mask, deviceRegion, data);
 
     // Draw the window over the blurred area
-    effects->drawWindow(renderTarget, viewport, w, mask, deviceRegion, data);
+    return effects->drawWindow(renderTarget, viewport, w, mask, deviceRegion, data);
 }
 
 GLTexture *BlurEffect::ensureNoiseTexture()

@@ -195,7 +195,7 @@ LightlyShadersEffect::reconfigure(ReconfigureFlags flags)
     effects->addRepaintFull();
 }
 
-void
+bool
 LightlyShadersEffect::paintScreen(const RenderTarget &renderTarget, const RenderViewport &viewport, int mask, const Region &deviceRegion, LogicalOutput *s)
 {
     bool set_roundness = false;
@@ -217,7 +217,7 @@ LightlyShadersEffect::paintScreen(const RenderTarget &renderTarget, const Render
         m_helper->reconfigure();
     }
 
-    effects->paintScreen(renderTarget, viewport, mask, deviceRegion, s);
+    return effects->paintScreen(renderTarget, viewport, mask, deviceRegion, s);
 }
 
 void
@@ -247,15 +247,14 @@ LightlyShadersEffect::isValidWindow(EffectWindow *w)
     return true;
 }
 
-void
+bool
 LightlyShadersEffect::drawWindow(const RenderTarget &renderTarget, const RenderViewport &viewport, EffectWindow *w, int mask, const Region &region, WindowPaintData &data)
 {
     RectF screen = viewport.renderRect().toRect();
 
     if (!isValidWindow(w) || (!screen.intersects(w->frameGeometry()) && !(mask & PAINT_WINDOW_TRANSFORMED)) )
     {
-        effects->drawWindow(renderTarget, viewport, w, mask, region, data);
-        return;
+        return effects->drawWindow(renderTarget, viewport, w, mask, region, data);
     }
 
     RectF geo(w->frameGeometry());
@@ -300,9 +299,11 @@ LightlyShadersEffect::drawWindow(const RenderTarget &renderTarget, const RenderV
 
     glActiveTexture(GL_TEXTURE0);
 
-    OffscreenEffect::drawWindow(renderTarget, viewport, w, mask, region, data);
+    const bool ret = OffscreenEffect::drawWindow(renderTarget, viewport, w, mask, region, data);
 
     sm->popShader();
+
+    return ret;
 }
 
 RectF
