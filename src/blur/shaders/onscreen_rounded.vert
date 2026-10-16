@@ -1,10 +1,12 @@
+#version 140
+
 uniform mat4 modelViewProjectionMatrix;
 
-attribute vec2 position;
-attribute vec2 texcoord;
+in vec2 position;
+in vec2 texcoord;
 
-varying vec2 uv;
-varying vec2 vertex;
+out vec2 uv;
+out vec2 vertex;
 
 void main(void)
 {

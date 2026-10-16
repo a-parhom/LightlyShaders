@@ -1,20 +1,24 @@
+#version 140
+
 uniform sampler2D texUnit;
 uniform mat4 colorMatrix;
 uniform float offset;
 uniform vec2 halfpixel;
 
-varying vec2 uv;
+in vec2 uv;
+
+out vec4 fragColor;
 
 void main(void)
 {
-    vec4 sum = texture2D(texUnit, uv + vec2(-halfpixel.x * 2.0, 0.0) * offset);
-    sum += texture2D(texUnit, uv + vec2(-halfpixel.x, halfpixel.y) * offset) * 2.0;
-    sum += texture2D(texUnit, uv + vec2(0.0, halfpixel.y * 2.0) * offset);
-    sum += texture2D(texUnit, uv + vec2(halfpixel.x, halfpixel.y) * offset) * 2.0;
-    sum += texture2D(texUnit, uv + vec2(halfpixel.x * 2.0, 0.0) * offset);
-    sum += texture2D(texUnit, uv + vec2(halfpixel.x, -halfpixel.y) * offset) * 2.0;
-    sum += texture2D(texUnit, uv + vec2(0.0, -halfpixel.y * 2.0) * offset);
-    sum += texture2D(texUnit, uv + vec2(-halfpixel.x, -halfpixel.y) * offset) * 2.0;
+    vec4 sum = texture(texUnit, uv + vec2(-halfpixel.x * 2.0, 0.0) * offset);
+    sum += texture(texUnit, uv + vec2(-halfpixel.x, halfpixel.y) * offset) * 2.0;
+    sum += texture(texUnit, uv + vec2(0.0, halfpixel.y * 2.0) * offset);
+    sum += texture(texUnit, uv + vec2(halfpixel.x, halfpixel.y) * offset) * 2.0;
+    sum += texture(texUnit, uv + vec2(halfpixel.x * 2.0, 0.0) * offset);
+    sum += texture(texUnit, uv + vec2(halfpixel.x, -halfpixel.y) * offset) * 2.0;
+    sum += texture(texUnit, uv + vec2(0.0, -halfpixel.y * 2.0) * offset);
+    sum += texture(texUnit, uv + vec2(-halfpixel.x, -halfpixel.y) * offset) * 2.0;
 
-    gl_FragColor = (sum / 12.0) * colorMatrix;
+    fragColor = (sum / 12.0) * colorMatrix;
 }
